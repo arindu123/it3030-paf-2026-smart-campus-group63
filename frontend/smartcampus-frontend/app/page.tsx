@@ -277,7 +277,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_40%),linear-gradient(180deg,_#f5f0e8_0%,_#efe6d5_48%,_#e3d3b1_100%)] px-4 py-8 text-stone-900 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_40%),linear-gradient(180deg,_#f5f0e8_0%,_#efe6d5_48%,_#e3d3b1_100%)] px-4 py-8 text-stone-900 sm:px-6 lg:px-8" suppressHydrationWarning>
       <div className="mx-auto max-w-7xl">
         <section className="mb-8 overflow-hidden rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_20px_70px_rgba(75,55,22,0.14)] backdrop-blur md:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -316,7 +316,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]" suppressHydrationWarning>
           <div className="space-y-8">
             <Panel
               eyebrow="Ticket Form"
