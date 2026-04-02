@@ -287,6 +287,8 @@ export default function Home() {
               </p>
               <h1 className="text-4xl font-semibold tracking-tight text-stone-950 md:text-5xl">
                 Manage tickets and resources from one simple frontend.
+                                Manage tickets and resources from one simple frontend.
+
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 md:text-base">
                 This dashboard is wired to your Spring Boot backend on port 8081 and gives you a
