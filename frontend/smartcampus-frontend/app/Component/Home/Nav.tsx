@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 type StoredUser = {
   email: string;
@@ -11,23 +11,25 @@ type StoredUser = {
 };
 
 export default function Nav() {
+  const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<StoredUser | null>(null);
+  const [user, setUser] = useState<StoredUser | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
 
-  useEffect(() => {
     const raw = window.localStorage.getItem("smartcampusUser");
     if (!raw) {
-      setUser(null);
-      return;
+      return null;
     }
 
     try {
-      setUser(JSON.parse(raw) as StoredUser);
+      return JSON.parse(raw) as StoredUser;
     } catch {
       window.localStorage.removeItem("smartcampusUser");
-      setUser(null);
+      return null;
     }
-  }, []);
+  });
 
   function logout() {
     window.localStorage.removeItem("smartcampusUser");
@@ -35,23 +37,37 @@ export default function Nav() {
     router.push("/");
   }
 
+  const navItems = [
+    { href: "/", label: "Home" },
+    { href: "/Component/resources", label: "Resources" },
+    { href: "/Component/bookings", label: "Bookings" },
+    { href: "/Component/Ticket", label: "Tickets" },
+  ];
+
   return (
     <nav className="flex items-center justify-between px-10 py-4 bg-white shadow sticky top-0 z-50">
-      
-      {/* Logo */}
-      <h1 className="text-xl font-bold text-blue-600">
+      <Link href="/" className="text-xl font-bold text-blue-600">
         Smart Campus
-      </h1>
+      </Link>
 
-      {/* Links */}
       <div className="hidden md:flex space-x-6 font-medium">
-        <Link href="/" className="hover:text-blue-600 transition">Home</Link>
-        <Link href="/Component/resources" className="hover:text-blue-600 transition">Resources</Link>
-        <Link href="/Component/bookings" className="hover:text-blue-600 transition">Bookings</Link>
-        <Link href="/Component/Ticket" className="hover:text-blue-600 transition">Tickets</Link>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`transition ${
+                isActive ? "text-blue-600" : "hover:text-blue-600"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </div>
 
-      {/* Actions */}
       <div className="space-x-3">
         {user ? (
           <>
