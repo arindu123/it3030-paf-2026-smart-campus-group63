@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type StoredUser = {
   email: string;
@@ -9,20 +9,23 @@ type StoredUser = {
 };
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<StoredUser | null>(null);
+  const [user] = useState<StoredUser | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
 
-  useEffect(() => {
     const raw = window.localStorage.getItem("smartcampusUser");
     if (!raw) {
-      return;
+      return null;
     }
 
     try {
-      setUser(JSON.parse(raw) as StoredUser);
+      return JSON.parse(raw) as StoredUser;
     } catch {
       window.localStorage.removeItem("smartcampusUser");
+      return null;
     }
-  }, []);
+  });
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 px-6 py-10">

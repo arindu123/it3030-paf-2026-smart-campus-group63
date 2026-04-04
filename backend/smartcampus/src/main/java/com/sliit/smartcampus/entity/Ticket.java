@@ -3,7 +3,12 @@ package com.sliit.smartcampus.entity;
 import com.sliit.smartcampus.enums.TicketCategory;
 import com.sliit.smartcampus.enums.TicketPriority;
 import com.sliit.smartcampus.enums.TicketStatus;
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
 import java.time.LocalDateTime;
 

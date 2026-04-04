@@ -3,7 +3,6 @@ package com.sliit.smartcampus.controller;
 import com.sliit.smartcampus.dto.ResourceRequest;
 import com.sliit.smartcampus.dto.ResourceStatusUpdateRequest;
 import com.sliit.smartcampus.entity.Resource;
-import com.sliit.smartcampus.enums.ResourceStatus;
 import com.sliit.smartcampus.service.ResourceService;
 import org.springframework.web.bind.annotation.*;
 
