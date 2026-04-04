@@ -22,21 +22,6 @@ type Ticket = {
   resolutionNote?: string;
 };
 
-<<<<<<< HEAD
-type Resource = {
-  id: number;
-  name: string;
-  type: string;
-  capacity: number;
-  location: string;
-  description: string;
-  availableFrom: string;
-  availableTo: string;
-  status: string;
-};
-
-=======
->>>>>>> pasindu_new
 type TicketForm = {
   title: string;
   description: string;
@@ -45,20 +30,6 @@ type TicketForm = {
   createdBy: string;
 };
 
-<<<<<<< HEAD
-type ResourceForm = {
-  name: string;
-  type: string;
-  capacity: string;
-  location: string;
-  description: string;
-  availableFrom: string;
-  availableTo: string;
-  status: string;
-};
-
-=======
->>>>>>> pasindu_new
 const defaultTicketForm: TicketForm = {
   title: "",
   description: "",
@@ -67,32 +38,11 @@ const defaultTicketForm: TicketForm = {
   createdBy: "student1",
 };
 
-<<<<<<< HEAD
-const defaultResourceForm: ResourceForm = {
-  name: "",
-  type: "LAB",
-  capacity: "",
-  location: "",
-  description: "",
-  availableFrom: "08:00:00",
-  availableTo: "17:00:00",
-  status: "ACTIVE",
-};
-
-export default function TicketPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [ticketForm, setTicketForm] = useState<TicketForm>(defaultTicketForm);
-  const [resourceForm, setResourceForm] = useState<ResourceForm>(defaultResourceForm);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("Backend connected. Ready to manage tickets and resources.");
-=======
 export default function TicketPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketForm, setTicketForm] = useState<TicketForm>(defaultTicketForm);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Backend connected. Ready to manage tickets.");
->>>>>>> pasindu_new
   const [error, setError] = useState("");
 
   async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -115,21 +65,10 @@ export default function TicketPage() {
     setError("");
 
     try {
-<<<<<<< HEAD
-      const [ticketData, resourceData] = await Promise.all([
-        fetchJson<Ticket[]>(`${API_BASE_URL}/tickets`),
-        fetchJson<Resource[]>(`${API_BASE_URL}/resources`),
-      ]);
-
-      setTickets(ticketData);
-      setResources(resourceData);
-      setMessage("Dashboard synced with backend API.");
-=======
       const ticketData = await fetchJson<Ticket[]>(`${API_BASE_URL}/tickets`);
 
       setTickets(ticketData);
       setMessage("Ticket dashboard synced with backend API.");
->>>>>>> pasindu_new
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load backend data.");
     } finally {
@@ -139,10 +78,7 @@ export default function TicketPage() {
 
   useEffect(() => {
     void loadDashboard();
-<<<<<<< HEAD
-=======
     // eslint-disable-next-line react-hooks/exhaustive-deps
->>>>>>> pasindu_new
   }, []);
 
   async function createTicket(event: FormEvent<HTMLFormElement>) {
@@ -166,33 +102,6 @@ export default function TicketPage() {
     }
   }
 
-<<<<<<< HEAD
-  async function createResource(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-
-    try {
-      await fetchJson<Resource>(`${API_BASE_URL}/resources`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...resourceForm,
-          capacity: Number(resourceForm.capacity),
-        }),
-      });
-
-      setResourceForm(defaultResourceForm);
-      setMessage("Resource created successfully.");
-      await loadDashboard();
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Failed to create resource.");
-    }
-  }
-
-=======
->>>>>>> pasindu_new
   async function updateTicketStatus(id: number, status: string) {
     setError("");
 
@@ -269,43 +178,6 @@ export default function TicketPage() {
     }
   }
 
-<<<<<<< HEAD
-  async function updateResourceStatus(id: number, status: string) {
-    setError("");
-
-    try {
-      await fetchJson<Resource>(`${API_BASE_URL}/resources/${id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      setMessage(`Resource #${id} updated to ${status}.`);
-      await loadDashboard();
-    } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Failed to update resource status.");
-    }
-  }
-
-  async function deleteResource(id: number) {
-    setError("");
-
-    try {
-      await fetchJson<string>(`${API_BASE_URL}/resources/${id}`, {
-        method: "DELETE",
-      });
-
-      setMessage(`Resource #${id} deleted.`);
-      await loadDashboard();
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete resource.");
-    }
-  }
-
-=======
->>>>>>> pasindu_new
   return (
     <div>
         <Nav/>
@@ -318,21 +190,11 @@ export default function TicketPage() {
                 Smart Campus Control Desk
               </p>
               <h1 className="text-4xl font-semibold tracking-tight text-stone-950 md:text-5xl">
-<<<<<<< HEAD
-                Manage tickets and resources from one simple frontend.
-                                Manage tickets and resources from one simple frontend.
-
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 md:text-base">
-                This dashboard is wired to your Spring Boot backend on port 8081 and gives you a
-                straightforward way to create, review, update, and remove campus data.
-=======
                 Manage tickets from one simple frontend.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 md:text-base">
                 This dashboard is wired to your Spring Boot backend on port 8081 and gives you a
                 straightforward way to create, review, update, and remove support tickets.
->>>>>>> pasindu_new
               </p>
             </div>
 
@@ -345,14 +207,8 @@ export default function TicketPage() {
             </button>
           </div>
 
-<<<<<<< HEAD
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <StatusCard label="Tickets" value={String(tickets.length)} tone="warm" />
-            <StatusCard label="Resources" value={String(resources.length)} tone="cool" />
-=======
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <StatusCard label="Tickets" value={String(tickets.length)} tone="warm" />
->>>>>>> pasindu_new
             <StatusCard label="Backend" value={loading ? "Syncing" : "Online"} tone="dark" />
           </div>
 
@@ -361,11 +217,7 @@ export default function TicketPage() {
           </div>
         </section>
 
-<<<<<<< HEAD
-        <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]" suppressHydrationWarning>
-=======
         <section className="max-w-4xl" suppressHydrationWarning>
->>>>>>> pasindu_new
           <div className="space-y-8">
             <Panel
               eyebrow="Ticket Form"
@@ -506,161 +358,6 @@ export default function TicketPage() {
               </div>
             </Panel>
           </div>
-<<<<<<< HEAD
-
-          <div className="space-y-8">
-            <Panel
-              eyebrow="Resource Form"
-              title="Register a campus resource"
-              description="Add labs, rooms, and equipment with opening hours and live availability."
-            >
-              <form className="grid gap-4" onSubmit={createResource}>
-                <Field
-                  label="Resource Name"
-                  value={resourceForm.name}
-                  onChange={(value) => setResourceForm((current) => ({ ...current, name: value }))}
-                  placeholder="Computer Lab A"
-                />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <SelectField
-                    label="Type"
-                    value={resourceForm.type}
-                    onChange={(value) => setResourceForm((current) => ({ ...current, type: value }))}
-                    options={resourceTypes}
-                  />
-                  <Field
-                    label="Capacity"
-                    value={resourceForm.capacity}
-                    onChange={(value) =>
-                      setResourceForm((current) => ({ ...current, capacity: value }))
-                    }
-                    placeholder="40"
-                    type="number"
-                  />
-                </div>
-
-                <Field
-                  label="Location"
-                  value={resourceForm.location}
-                  onChange={(value) =>
-                    setResourceForm((current) => ({ ...current, location: value }))
-                  }
-                  placeholder="Block A"
-                />
-
-                <TextAreaField
-                  label="Description"
-                  value={resourceForm.description}
-                  onChange={(value) =>
-                    setResourceForm((current) => ({ ...current, description: value }))
-                  }
-                  placeholder="Main programming lab"
-                />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field
-                    label="Available From"
-                    value={resourceForm.availableFrom}
-                    onChange={(value) =>
-                      setResourceForm((current) => ({ ...current, availableFrom: value }))
-                    }
-                    type="time"
-                  />
-                  <Field
-                    label="Available To"
-                    value={resourceForm.availableTo}
-                    onChange={(value) =>
-                      setResourceForm((current) => ({ ...current, availableTo: value }))
-                    }
-                    type="time"
-                  />
-                </div>
-
-                <SelectField
-                  label="Status"
-                  value={resourceForm.status}
-                  onChange={(value) =>
-                    setResourceForm((current) => ({ ...current, status: value }))
-                  }
-                  options={resourceStatuses}
-                />
-
-                <button
-                  className="mt-2 rounded-full bg-sky-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-600"
-                  type="submit"
-                >
-                  Save Resource
-                </button>
-              </form>
-            </Panel>
-
-            <Panel
-              eyebrow="Resources"
-              title="Availability overview"
-              description="See what is active right now and flip resource status in one click."
-            >
-              <div className="space-y-4">
-                {resources.length === 0 ? (
-                  <EmptyState text="No resources yet. Add one from the form above." />
-                ) : (
-                  resources.map((resource) => (
-                    <article
-                      key={resource.id}
-                      className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-xl font-semibold text-stone-950">{resource.name}</h3>
-                          <p className="mt-2 text-sm leading-6 text-stone-600">
-                            {resource.description}
-                          </p>
-                        </div>
-                        <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          {resource.status}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid gap-2 text-sm text-stone-600">
-                        <p>Type: {resource.type}</p>
-                        <p>Capacity: {resource.capacity}</p>
-                        <p>Location: {resource.location}</p>
-                        <p>
-                          Available: {resource.availableFrom} - {resource.availableTo}
-                        </p>
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap gap-3">
-                        <button
-                          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
-                          onClick={() => void updateResourceStatus(resource.id, "ACTIVE")}
-                          type="button"
-                        >
-                          Set Active
-                        </button>
-                        <button
-                          className="rounded-full bg-stone-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-600"
-                          onClick={() => void updateResourceStatus(resource.id, "OUT_OF_SERVICE")}
-                          type="button"
-                        >
-                          Set Out of Service
-                        </button>
-                        <button
-                          className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
-                          onClick={() => void deleteResource(resource.id)}
-                          type="button"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-            </Panel>
-          </div>
-=======
->>>>>>> pasindu_new
         </section>
       </div>
     </main>
@@ -697,22 +394,12 @@ function StatusCard({
 }: Readonly<{
   label: string;
   value: string;
-<<<<<<< HEAD
-  tone: "warm" | "cool" | "dark";
-=======
   tone: "warm" | "dark";
->>>>>>> pasindu_new
 }>) {
   const toneClass =
     tone === "warm"
       ? "bg-amber-100 text-amber-900"
-<<<<<<< HEAD
-      : tone === "cool"
-        ? "bg-sky-100 text-sky-900"
-        : "bg-stone-900 text-white";
-=======
       : "bg-stone-900 text-white";
->>>>>>> pasindu_new
 
   return (
     <div className={`rounded-3xl px-5 py-4 ${toneClass}`}>
@@ -808,8 +495,4 @@ function EmptyState({ text }: Readonly<{ text: string }>) {
       {text}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> pasindu_new
