@@ -1,6 +1,9 @@
 # backend
 /backend/target/
 /backend/.idea/
+/backend/smartcampus/.m2/
+/backend/smartcampus/data/
+/backend/smartcampus/uploads/
 *.log
 
 # frontend
