@@ -6,11 +6,8 @@ import Footer from "../Home/Footer";
 
 const API_BASE_URL = "http://localhost:8081/api";
 
-const ticketStatuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "REJECTED"] as const;
 const ticketPriorities = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 const ticketCategories = ["ELECTRICAL", "NETWORK", "EQUIPMENT", "CLEANING", "OTHER"] as const;
-const resourceTypes = ["ROOM", "LAB", "EQUIPMENT"] as const;
-const resourceStatuses = ["ACTIVE", "OUT_OF_SERVICE"] as const;
 
 type Ticket = {
   id: number;
@@ -25,6 +22,7 @@ type Ticket = {
   resolutionNote?: string;
 };
 
+<<<<<<< HEAD
 type Resource = {
   id: number;
   name: string;
@@ -37,6 +35,8 @@ type Resource = {
   status: string;
 };
 
+=======
+>>>>>>> pasindu_new
 type TicketForm = {
   title: string;
   description: string;
@@ -45,6 +45,7 @@ type TicketForm = {
   createdBy: string;
 };
 
+<<<<<<< HEAD
 type ResourceForm = {
   name: string;
   type: string;
@@ -56,6 +57,8 @@ type ResourceForm = {
   status: string;
 };
 
+=======
+>>>>>>> pasindu_new
 const defaultTicketForm: TicketForm = {
   title: "",
   description: "",
@@ -64,6 +67,7 @@ const defaultTicketForm: TicketForm = {
   createdBy: "student1",
 };
 
+<<<<<<< HEAD
 const defaultResourceForm: ResourceForm = {
   name: "",
   type: "LAB",
@@ -82,6 +86,13 @@ export default function TicketPage() {
   const [resourceForm, setResourceForm] = useState<ResourceForm>(defaultResourceForm);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Backend connected. Ready to manage tickets and resources.");
+=======
+export default function TicketPage() {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketForm, setTicketForm] = useState<TicketForm>(defaultTicketForm);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("Backend connected. Ready to manage tickets.");
+>>>>>>> pasindu_new
   const [error, setError] = useState("");
 
   async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -104,6 +115,7 @@ export default function TicketPage() {
     setError("");
 
     try {
+<<<<<<< HEAD
       const [ticketData, resourceData] = await Promise.all([
         fetchJson<Ticket[]>(`${API_BASE_URL}/tickets`),
         fetchJson<Resource[]>(`${API_BASE_URL}/resources`),
@@ -112,6 +124,12 @@ export default function TicketPage() {
       setTickets(ticketData);
       setResources(resourceData);
       setMessage("Dashboard synced with backend API.");
+=======
+      const ticketData = await fetchJson<Ticket[]>(`${API_BASE_URL}/tickets`);
+
+      setTickets(ticketData);
+      setMessage("Ticket dashboard synced with backend API.");
+>>>>>>> pasindu_new
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load backend data.");
     } finally {
@@ -121,6 +139,10 @@ export default function TicketPage() {
 
   useEffect(() => {
     void loadDashboard();
+<<<<<<< HEAD
+=======
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+>>>>>>> pasindu_new
   }, []);
 
   async function createTicket(event: FormEvent<HTMLFormElement>) {
@@ -144,6 +166,7 @@ export default function TicketPage() {
     }
   }
 
+<<<<<<< HEAD
   async function createResource(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -168,6 +191,8 @@ export default function TicketPage() {
     }
   }
 
+=======
+>>>>>>> pasindu_new
   async function updateTicketStatus(id: number, status: string) {
     setError("");
 
@@ -244,6 +269,7 @@ export default function TicketPage() {
     }
   }
 
+<<<<<<< HEAD
   async function updateResourceStatus(id: number, status: string) {
     setError("");
 
@@ -278,6 +304,8 @@ export default function TicketPage() {
     }
   }
 
+=======
+>>>>>>> pasindu_new
   return (
     <div>
         <Nav/>
@@ -290,6 +318,7 @@ export default function TicketPage() {
                 Smart Campus Control Desk
               </p>
               <h1 className="text-4xl font-semibold tracking-tight text-stone-950 md:text-5xl">
+<<<<<<< HEAD
                 Manage tickets and resources from one simple frontend.
                                 Manage tickets and resources from one simple frontend.
 
@@ -297,6 +326,13 @@ export default function TicketPage() {
               <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 md:text-base">
                 This dashboard is wired to your Spring Boot backend on port 8081 and gives you a
                 straightforward way to create, review, update, and remove campus data.
+=======
+                Manage tickets from one simple frontend.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 md:text-base">
+                This dashboard is wired to your Spring Boot backend on port 8081 and gives you a
+                straightforward way to create, review, update, and remove support tickets.
+>>>>>>> pasindu_new
               </p>
             </div>
 
@@ -309,9 +345,14 @@ export default function TicketPage() {
             </button>
           </div>
 
+<<<<<<< HEAD
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <StatusCard label="Tickets" value={String(tickets.length)} tone="warm" />
             <StatusCard label="Resources" value={String(resources.length)} tone="cool" />
+=======
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <StatusCard label="Tickets" value={String(tickets.length)} tone="warm" />
+>>>>>>> pasindu_new
             <StatusCard label="Backend" value={loading ? "Syncing" : "Online"} tone="dark" />
           </div>
 
@@ -320,7 +361,11 @@ export default function TicketPage() {
           </div>
         </section>
 
+<<<<<<< HEAD
         <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]" suppressHydrationWarning>
+=======
+        <section className="max-w-4xl" suppressHydrationWarning>
+>>>>>>> pasindu_new
           <div className="space-y-8">
             <Panel
               eyebrow="Ticket Form"
@@ -461,6 +506,7 @@ export default function TicketPage() {
               </div>
             </Panel>
           </div>
+<<<<<<< HEAD
 
           <div className="space-y-8">
             <Panel
@@ -613,6 +659,8 @@ export default function TicketPage() {
               </div>
             </Panel>
           </div>
+=======
+>>>>>>> pasindu_new
         </section>
       </div>
     </main>
@@ -649,14 +697,22 @@ function StatusCard({
 }: Readonly<{
   label: string;
   value: string;
+<<<<<<< HEAD
   tone: "warm" | "cool" | "dark";
+=======
+  tone: "warm" | "dark";
+>>>>>>> pasindu_new
 }>) {
   const toneClass =
     tone === "warm"
       ? "bg-amber-100 text-amber-900"
+<<<<<<< HEAD
       : tone === "cool"
         ? "bg-sky-100 text-sky-900"
         : "bg-stone-900 text-white";
+=======
+      : "bg-stone-900 text-white";
+>>>>>>> pasindu_new
 
   return (
     <div className={`rounded-3xl px-5 py-4 ${toneClass}`}>
@@ -752,4 +808,8 @@ function EmptyState({ text }: Readonly<{ text: string }>) {
       {text}
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> pasindu_new
