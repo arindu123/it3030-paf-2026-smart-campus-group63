@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Nav from "../Home/Nav";
 import Footer from "../Home/Footer";
@@ -18,6 +18,7 @@ type LoginResult = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -36,6 +37,34 @@ export default function LoginPage() {
 
     return "/Component/dashboard/user";
   }
+
+  useEffect(() => {
+    const oauthStatus = searchParams.get("oauth");
+
+    if (oauthStatus === "success") {
+      const oauthEmail = searchParams.get("email") || "";
+      const oauthFullName = searchParams.get("fullName") || "";
+      const oauthRole = (searchParams.get("role") as "USER" | "ADMIN" | "TECHNICIAN" | null) || "USER";
+
+      window.localStorage.setItem(
+        "smartcampusUser",
+        JSON.stringify({
+          email: oauthEmail,
+          fullName: oauthFullName,
+          role: oauthRole,
+          rememberMe: true,
+        })
+      );
+
+      router.replace(getDashboardByRole(oauthRole));
+      return;
+    }
+
+    if (oauthStatus === "error") {
+      setIsError(true);
+      setMessage(searchParams.get("message") || "Google login failed");
+    }
+  }, [router, searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

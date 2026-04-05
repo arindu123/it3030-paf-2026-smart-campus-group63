@@ -31,6 +31,11 @@ public class LoginController {
                 .body(new LoginResponse(false, "Email and password are required"));
         }
 
+        if (userService.isGoogleAccount(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new LoginResponse(false, "This account uses Google sign-in. Please click Continue with Google."));
+        }
+
         User user = userService.authenticate(request).orElse(null);
 
         if (user == null) {
