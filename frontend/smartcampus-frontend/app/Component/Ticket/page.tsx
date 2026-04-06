@@ -1,8 +1,6 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import Footer from "../Home/Footer";
-import Nav from "../Home/Nav";
 import {
   API_BASE_URL,
   defaultTicketForm,
@@ -20,6 +18,7 @@ import {
   SelectField,
   TextAreaField,
 } from "../shared/CampusUi";
+import { SiteFrame } from "../shared/SiteFrame";
 
 export default function TicketPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -147,15 +146,10 @@ export default function TicketPage() {
   const resolvedTickets = tickets.filter((ticket) => ticket.status === "RESOLVED").length;
 
   return (
-    <div>
-      <Nav />
-      <main
-        className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_40%),linear-gradient(180deg,_#f5f0e8_0%,_#efe6d5_48%,_#e3d3b1_100%)] px-4 py-8 text-stone-900 sm:px-6 lg:px-8"
-        suppressHydrationWarning
-      >
-        <div className="mx-auto max-w-7xl">
+    <SiteFrame accent="amber">
+      <div className="mx-auto max-w-7xl">
           <DashboardHero
-            description="This ticket desk is wired to your Spring Boot backend on port 8081 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
+            description="This ticket desk is wired to your Spring Boot backend on port 8089 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
             eyebrow="Smart Campus Ticket Desk"
             error={error}
             message={message}
@@ -221,7 +215,7 @@ export default function TicketPage() {
                 </div>
 
                 <button
-                  className="mt-2 rounded-full bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-500"
+                  className="mt-2 rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105"
                   type="submit"
                 >
                   Save Ticket
@@ -250,7 +244,7 @@ export default function TicketPage() {
                             {ticket.description}
                           </p>
                         </div>
-                        <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                        <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">
                           {ticket.status}
                         </span>
                       </div>
@@ -274,14 +268,14 @@ export default function TicketPage() {
                           Mark In Progress
                         </button>
                         <button
-                          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+                          className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
                           onClick={() => void updateTicketStatus(ticket.id, "RESOLVED")}
                           type="button"
                         >
                           Mark Resolved
                         </button>
                         <button
-                          className="rounded-full bg-sky-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-600"
+                          className="rounded-full bg-emerald-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
                           onClick={() => void assignTech(ticket.id)}
                           type="button"
                         >
@@ -308,9 +302,7 @@ export default function TicketPage() {
               </div>
             </Panel>
           </section>
-        </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </SiteFrame>
   );
 }

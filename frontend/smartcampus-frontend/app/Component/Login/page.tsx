@@ -3,10 +3,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Nav from "../Home/Nav";
-import Footer from "../Home/Footer";
-
-const API_BASE_URL = "http://localhost:8081/api";
+import { API_BASE_URL, GOOGLE_AUTH_URL } from "../shared/campusApi";
+import { Eyebrow, GlassPanel, SiteFrame } from "../shared/SiteFrame";
 
 type LoginResult = {
   success: boolean;
@@ -109,44 +107,66 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100">
-      <Nav />
-      <main className="flex-1 flex items-center justify-center px-6 py-10">
-        <section className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
-          <h1 className="text-2xl font-bold text-gray-900">Login</h1>
-          <p className="mt-2 text-sm text-gray-600">Login using your email and password.</p>
+    <SiteFrame accent="sky">
+      <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+        <GlassPanel className="bg-[linear-gradient(160deg,rgba(12,40,26,0.96),rgba(26,103,61,0.92))] text-slate-50">
+          <Eyebrow>Welcome Back</Eyebrow>
+          <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
+            Sign in to your Smart Campus workspace.
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-8 text-slate-200">
+            Access operational dashboards, resource tools, and ticket management with a cleaner,
+            role-aware entry point.
+          </p>
 
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="email">
-                Email
-              </label>
+          <div className="mt-10 grid gap-4">
+            <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
+              <p className="text-xs uppercase tracking-[0.28em] text-green-200">Accounts</p>
+              <p className="mt-3 text-lg font-semibold">Students, admins, and technicians</p>
+            </div>
+            <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
+              <p className="text-xs uppercase tracking-[0.28em] text-green-200">Access Flow</p>
+              <p className="mt-3 text-lg font-semibold">Email login or Google sign-in from one screen</p>
+            </div>
+          </div>
+        </GlassPanel>
+
+        <GlassPanel className="p-7 sm:p-8">
+          <Eyebrow>Login</Eyebrow>
+          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-stone-950">
+            Continue to your dashboard
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-stone-600">
+            Use your campus email and password to enter the system.
+          </p>
+
+          <form className="mt-8 grid gap-5" onSubmit={handleSubmit}>
+            <label className="grid gap-2 text-sm font-semibold text-stone-700" htmlFor="email">
+              Email
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                 required
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="password">
-                Password
-              </label>
+            <label className="grid gap-2 text-sm font-semibold text-stone-700" htmlFor="password">
+              Password
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                 required
               />
-            </div>
+            </label>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-gray-600">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+              <label className="flex items-center gap-2 text-stone-600">
                 <input
                   type="checkbox"
                   checked={rememberMe}
@@ -154,33 +174,32 @@ export default function LoginPage() {
                 />
                 Remember me
               </label>
-              <Link href="#" className="text-blue-600 hover:underline">
-                Forgot Password
+              <Link href="/Component/Register" className="font-semibold text-amber-700 hover:text-amber-900">
+                Need an account?
               </Link>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 font-semibold text-white shadow-lg shadow-amber-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? "Signing in..." : "Login"}
             </button>
           </form>
 
           <a
-            href="http://localhost:8081/oauth2/authorization/google"
-            className="mt-3 block w-full rounded-lg border border-gray-300 px-4 py-2 text-center font-semibold text-gray-700 transition hover:bg-gray-100"
+            href={GOOGLE_AUTH_URL}
+            className="mt-4 block rounded-full border border-stone-200 bg-white px-5 py-3 text-center font-semibold text-stone-700 transition hover:bg-stone-50"
           >
             Continue with Google
           </a>
 
           {message ? (
-            <p className={`mt-4 text-sm ${isError ? "text-red-600" : "text-green-600"}`}>{message}</p>
+            <p className={`mt-4 text-sm ${isError ? "text-red-600" : "text-amber-700"}`}>{message}</p>
           ) : null}
-        </section>
-      </main>
-      <Footer />
-    </div>
+        </GlassPanel>
+      </div>
+    </SiteFrame>
   );
 }

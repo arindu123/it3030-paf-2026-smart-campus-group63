@@ -1,8 +1,6 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import Footer from "../Home/Footer";
-import Nav from "../Home/Nav";
 import {
   API_BASE_URL,
   BookingForm,
@@ -22,6 +20,7 @@ import {
   SelectField,
   TextAreaField,
 } from "../shared/CampusUi";
+import { SiteFrame } from "../shared/SiteFrame";
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -153,15 +152,10 @@ export default function ResourcesPage() {
   const activeResources = resources.filter((resource) => resource.status === "ACTIVE").length;
 
   return (
-    <div>
-      <Nav />
-      <main
-        className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_40%),linear-gradient(180deg,_#eef6ff_0%,_#ddeefe_48%,_#c8dff7_100%)] px-4 py-8 text-stone-900 sm:px-6 lg:px-8"
-        suppressHydrationWarning
-      >
-        <div className="mx-auto max-w-7xl">
+    <SiteFrame accent="sky">
+      <div className="mx-auto max-w-7xl">
           <DashboardHero
-            description="This resource workspace is wired to your Spring Boot backend on port 8081 so you can register labs, rooms, and equipment, then update live availability from one page."
+            description="This resource workspace is wired to your Spring Boot backend on port 8089 so you can register labs, rooms, and equipment, then update live availability from one page."
             eyebrow="Smart Campus Resource Desk"
             error={error}
             message={message}
@@ -253,7 +247,7 @@ export default function ResourcesPage() {
                 />
 
                 <button
-                  className="mt-2 rounded-full bg-sky-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-600"
+                  className="mt-2 rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105"
                   type="submit"
                 >
                   Save Resource
@@ -282,7 +276,7 @@ export default function ResourcesPage() {
                             {resource.description}
                           </p>
                         </div>
-                        <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800">
+                        <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">
                           {resource.status}
                         </span>
                       </div>
@@ -298,7 +292,7 @@ export default function ResourcesPage() {
 
                       <div className="mt-5 flex flex-wrap gap-3">
                         <button
-                          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+                          className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
                           onClick={() => void updateResourceStatus(resource.id, "ACTIVE")}
                           type="button"
                         >
@@ -332,105 +326,102 @@ export default function ResourcesPage() {
               </div>
             </Panel>
           </section>
-        </div>
-      </main>
 
-      {isBookingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-2xl font-bold text-stone-950">Book Resource</h2>
-            
-            {bookingError && (
-              <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
-                {bookingError}
+          {isBookingModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+                <h2 className="mb-4 text-2xl font-bold text-stone-950">Book Resource</h2>
+
+                {bookingError && (
+                  <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+                    {bookingError}
+                  </div>
+                )}
+
+                <form className="space-y-4" onSubmit={submitBooking}>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700">Date</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                      type="date"
+                      value={bookingForm.date}
+                      onChange={(e) =>
+                        setBookingForm((current) => ({ ...current, date: e.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-stone-700">Start Time</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                        type="time"
+                        value={bookingForm.startTime}
+                        onChange={(e) =>
+                          setBookingForm((current) => ({ ...current, startTime: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-stone-700">End Time</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                        type="time"
+                        value={bookingForm.endTime}
+                        onChange={(e) =>
+                          setBookingForm((current) => ({ ...current, endTime: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700">Purpose</label>
+                    <textarea
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                      placeholder="Why do you need this resource?"
+                      rows={3}
+                      value={bookingForm.purpose}
+                      onChange={(e) =>
+                        setBookingForm((current) => ({ ...current, purpose: e.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700">Expected Attendees</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                      type="number"
+                      placeholder="Number of people"
+                      value={bookingForm.expectedAttendees}
+                      onChange={(e) =>
+                        setBookingForm((current) => ({ ...current, expectedAttendees: e.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      className="flex-1 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
+                      type="submit"
+                    >
+                      Book
+                    </button>
+                    <button
+                      className="flex-1 rounded-full bg-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200"
+                      type="button"
+                      onClick={closeBookingModal}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </div>
-            )}
-
-            <form className="space-y-4" onSubmit={submitBooking}>
-              <div>
-                <label className="block text-sm font-medium text-stone-700">Date</label>
-                <input
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
-                  type="date"
-                  value={bookingForm.date}
-                  onChange={(e) =>
-                    setBookingForm((current) => ({ ...current, date: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-stone-700">Start Time</label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
-                    type="time"
-                    value={bookingForm.startTime}
-                    onChange={(e) =>
-                      setBookingForm((current) => ({ ...current, startTime: e.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700">End Time</label>
-                  <input
-                    className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
-                    type="time"
-                    value={bookingForm.endTime}
-                    onChange={(e) =>
-                      setBookingForm((current) => ({ ...current, endTime: e.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700">Purpose</label>
-                <textarea
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
-                  placeholder="Why do you need this resource?"
-                  rows={3}
-                  value={bookingForm.purpose}
-                  onChange={(e) =>
-                    setBookingForm((current) => ({ ...current, purpose: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700">Expected Attendees</label>
-                <input
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
-                  type="number"
-                  placeholder="Number of people"
-                  value={bookingForm.expectedAttendees}
-                  onChange={(e) =>
-                    setBookingForm((current) => ({ ...current, expectedAttendees: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  className="flex-1 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
-                  type="submit"
-                >
-                  Book
-                </button>
-                <button
-                  className="flex-1 rounded-full bg-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200"
-                  type="button"
-                  onClick={closeBookingModal}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <Footer />
-    </div>
+            </div>
+          )}
+      </div>
+    </SiteFrame>
   );
 }

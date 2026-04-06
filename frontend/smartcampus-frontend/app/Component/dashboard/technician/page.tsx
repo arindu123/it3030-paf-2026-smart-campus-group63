@@ -1,19 +1,26 @@
 "use client";
 
-import Nav from "../../Home/Nav";
-import Footer from "../../Home/Footer";
+import { RoleDashboard } from "../../shared/RoleDashboard";
 
 export default function TechnicianDashboardPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 text-gray-800">
-      <Nav />
-      <main className="flex-1 px-6 py-10">
-        <section className="mx-auto max-w-5xl rounded-2xl bg-white p-8 shadow">
-          <h1 className="text-3xl font-bold">Technician Dashboard</h1>
-          <p className="mt-3 text-gray-600">Handle assigned maintenance tickets and update progress.</p>
-        </section>
-      </main>
-      <Footer />
-    </div>
+    <RoleDashboard
+      accent="mint"
+      eyebrow="Technician Dashboard"
+      title="Stay focused on assigned tickets, progress updates, and resolution work."
+      description="This technician view is now designed to highlight execution and issue flow instead of just showing a basic page heading."
+      ctaHref="/Component/Ticket"
+      ctaLabel="Open Ticket Desk"
+      metrics={[
+        { label: "Assigned Work", value: "Actionable", detail: "Technicians need to understand priorities quickly and clearly." },
+        { label: "Progress", value: "Trackable", detail: "Status movement and resolution notes should feel natural to update." },
+        { label: "Queue", value: "Focused", detail: "The layout leaves room for assigned tickets and service context." },
+      ]}
+      priorities={[
+        "Check newly assigned issues",
+        "Update ticket status and add resolution notes",
+        "Keep service turnaround visible to the wider system",
+      ]}
+    />
   );
 }

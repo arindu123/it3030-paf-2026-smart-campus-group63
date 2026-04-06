@@ -1,19 +1,26 @@
 "use client";
 
-import Nav from "../../Home/Nav";
-import Footer from "../../Home/Footer";
+import { RoleDashboard } from "../../shared/RoleDashboard";
 
 export default function AdminDashboardPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 text-gray-800">
-      <Nav />
-      <main className="flex-1 px-6 py-10">
-        <section className="mx-auto max-w-5xl rounded-2xl bg-white p-8 shadow">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="mt-3 text-gray-600">Review and approve booking and operational requests.</p>
-        </section>
-      </main>
-      <Footer />
-    </div>
+    <RoleDashboard
+      accent="sky"
+      eyebrow="Admin Dashboard"
+      title="See approvals, operational health, and service direction at a glance."
+      description="The admin dashboard now has enough structure to grow into a real command surface instead of feeling like a placeholder."
+      ctaHref="/Component/notifications"
+      ctaLabel="Review Updates"
+      metrics={[
+        { label: "Oversight", value: "Central", detail: "Admins need one place to assess bookings, tickets, and system health." },
+        { label: "Decisions", value: "Faster", detail: "Approvals and escalations deserve strong visibility and cleaner grouping." },
+        { label: "Operations", value: "Readable", detail: "The new layout leaves room for metrics, queues, and alerts." },
+      ]}
+      priorities={[
+        "Review pending approvals and operational changes",
+        "Track backend and service reliability indicators",
+        "Coordinate cross-team actions with clearer visibility",
+      ]}
+    />
   );
 }
