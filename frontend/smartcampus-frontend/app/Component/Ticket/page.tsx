@@ -149,7 +149,7 @@ export default function TicketPage() {
     <SiteFrame accent="amber">
       <div className="mx-auto max-w-7xl">
           <DashboardHero
-            description="This ticket desk is wired to your Spring Boot backend on port 8086 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
+            description="This ticket desk is wired to your Spring Boot backend on port 8089 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
             eyebrow="Smart Campus Ticket Desk"
             error={error}
             message={message}
