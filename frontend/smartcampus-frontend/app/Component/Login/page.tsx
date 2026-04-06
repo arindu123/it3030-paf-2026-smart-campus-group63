@@ -1,9 +1,9 @@
 "use client";
 
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "../shared/campusApi";
+import { API_BASE_URL, GOOGLE_AUTH_URL } from "../shared/campusApi";
 import { Eyebrow, GlassPanel, SiteFrame } from "../shared/SiteFrame";
 
 type LoginResult = {
@@ -16,6 +16,7 @@ type LoginResult = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -34,6 +35,34 @@ export default function LoginPage() {
 
     return "/Component/dashboard/user";
   }
+
+  useEffect(() => {
+    const oauthStatus = searchParams.get("oauth");
+
+    if (oauthStatus === "success") {
+      const oauthEmail = searchParams.get("email") || "";
+      const oauthFullName = searchParams.get("fullName") || "";
+      const oauthRole = (searchParams.get("role") as "USER" | "ADMIN" | "TECHNICIAN" | null) || "USER";
+
+      window.localStorage.setItem(
+        "smartcampusUser",
+        JSON.stringify({
+          email: oauthEmail,
+          fullName: oauthFullName,
+          role: oauthRole,
+          rememberMe: true,
+        })
+      );
+
+      router.replace(getDashboardByRole(oauthRole));
+      return;
+    }
+
+    if (oauthStatus === "error") {
+      setIsError(true);
+      setMessage(searchParams.get("message") || "Google login failed");
+    }
+  }, [router, searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -160,7 +189,7 @@ export default function LoginPage() {
           </form>
 
           <a
-            href="http://localhost:8081/oauth2/authorization/google"
+            href={GOOGLE_AUTH_URL}
             className="mt-4 block rounded-full border border-stone-200 bg-white px-5 py-3 text-center font-semibold text-stone-700 transition hover:bg-stone-50"
           >
             Continue with Google
