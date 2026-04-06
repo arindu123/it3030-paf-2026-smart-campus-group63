@@ -2,7 +2,6 @@ package com.sliit.smartcampus.service;
 
 import com.sliit.smartcampus.dto.BookingRequest;
 import com.sliit.smartcampus.dto.BookingResponse;
-import com.sliit.smartcampus.entity.Booking;
 
 import java.util.List;
 

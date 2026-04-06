@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "../shared/campusApi";
+import { API_BASE_URL, GOOGLE_AUTH_URL } from "../shared/campusApi";
 import { Eyebrow, GlassPanel, SiteFrame } from "../shared/SiteFrame";
 
 type ApiResponse = {
@@ -89,7 +89,7 @@ export default function RegisterFormPage() {
           </p>
 
           <a
-            href="http://localhost:8081/oauth2/authorization/google"
+            href={GOOGLE_AUTH_URL}
             className="mt-6 block rounded-full border border-stone-200 bg-white px-5 py-3 text-center font-semibold text-stone-700 transition hover:bg-stone-50"
           >
             Continue with Google

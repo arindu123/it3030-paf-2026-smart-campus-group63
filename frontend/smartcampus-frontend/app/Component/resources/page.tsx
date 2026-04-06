@@ -155,7 +155,7 @@ export default function ResourcesPage() {
     <SiteFrame accent="sky">
       <div className="mx-auto max-w-7xl">
           <DashboardHero
-            description="This resource workspace is wired to your Spring Boot backend on port 8081 so you can register labs, rooms, and equipment, then update live availability from one page."
+            description="This resource workspace is wired to your Spring Boot backend on port 8086 so you can register labs, rooms, and equipment, then update live availability from one page."
             eyebrow="Smart Campus Resource Desk"
             error={error}
             message={message}
