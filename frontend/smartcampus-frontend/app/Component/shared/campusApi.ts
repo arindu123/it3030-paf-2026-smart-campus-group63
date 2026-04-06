@@ -30,6 +30,18 @@ export type Resource = {
   status: string;
 };
 
+export type Booking = {
+  id: number;
+  resourceId: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  purpose: string;
+  expectedAttendees: number;
+  status: string;
+  resourceName?: string;
+};
+
 export type TicketForm = {
   title: string;
   description: string;
@@ -47,6 +59,15 @@ export type ResourceForm = {
   availableFrom: string;
   availableTo: string;
   status: string;
+};
+
+export type BookingForm = {
+  resourceId: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  purpose: string;
+  expectedAttendees: string;
 };
 
 export const defaultTicketForm: TicketForm = {
@@ -67,6 +88,15 @@ export const defaultResourceForm: ResourceForm = {
   availableTo: "17:00:00",
   status: "ACTIVE",
 };
+
+export const defaultBookingForm = (resourceId: number): BookingForm => ({
+  resourceId,
+  date: "",
+  startTime: "",
+  endTime: "",
+  purpose: "",
+  expectedAttendees: "",
+});
 
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
