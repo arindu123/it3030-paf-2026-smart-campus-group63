@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   API_BASE_URL,
+  BookingForm,
+  defaultBookingForm,
   defaultResourceForm,
   fetchJson,
   Resource,
@@ -26,6 +28,10 @@ export default function ResourcesPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Backend connected. Ready to manage campus resources.");
   const [error, setError] = useState("");
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedResourceId, setSelectedResourceId] = useState<number | null>(null);
+  const [bookingForm, setBookingForm] = useState<BookingForm>(defaultBookingForm(0));
+  const [bookingError, setBookingError] = useState("");
 
   const loadResources = useCallback(async () => {
     setLoading(true);
@@ -101,6 +107,45 @@ export default function ResourcesPage() {
       await loadResources();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete resource.");
+    }
+  }
+
+  function openBookingModal(resourceId: number) {
+    setSelectedResourceId(resourceId);
+    setBookingForm(defaultBookingForm(resourceId));
+    setBookingError("");
+    setIsBookingModalOpen(true);
+  }
+
+  function closeBookingModal() {
+    setIsBookingModalOpen(false);
+    setSelectedResourceId(null);
+    setBookingError("");
+  }
+
+  async function submitBooking(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBookingError("");
+
+    if (!bookingForm.date || !bookingForm.startTime || !bookingForm.endTime || !bookingForm.purpose || !bookingForm.expectedAttendees) {
+      setBookingError("Please fill in all fields.");
+      return;
+    }
+
+    try {
+      await fetchJson(`${API_BASE_URL}/bookings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bookingForm),
+      });
+
+      setMessage(`Booking created successfully for resource #${bookingForm.resourceId}.`);
+      closeBookingModal();
+      await loadResources();
+    } catch (bookError) {
+      setBookingError(bookError instanceof Error ? bookError.message : "Failed to create booking.");
     }
   }
 
@@ -254,6 +299,13 @@ export default function ResourcesPage() {
                           Set Active
                         </button>
                         <button
+                          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
+                          onClick={() => openBookingModal(resource.id)}
+                          type="button"
+                        >
+                          Book
+                        </button>
+                        <button
                           className="rounded-full bg-stone-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-600"
                           onClick={() => void updateResourceStatus(resource.id, "OUT_OF_SERVICE")}
                           type="button"
@@ -274,6 +326,101 @@ export default function ResourcesPage() {
               </div>
             </Panel>
           </section>
+
+          {isBookingModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+                <h2 className="mb-4 text-2xl font-bold text-stone-950">Book Resource</h2>
+
+                {bookingError && (
+                  <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+                    {bookingError}
+                  </div>
+                )}
+
+                <form className="space-y-4" onSubmit={submitBooking}>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700">Date</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                      type="date"
+                      value={bookingForm.date}
+                      onChange={(e) =>
+                        setBookingForm((current) => ({ ...current, date: e.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-stone-700">Start Time</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                        type="time"
+                        value={bookingForm.startTime}
+                        onChange={(e) =>
+                          setBookingForm((current) => ({ ...current, startTime: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-stone-700">End Time</label>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                        type="time"
+                        value={bookingForm.endTime}
+                        onChange={(e) =>
+                          setBookingForm((current) => ({ ...current, endTime: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700">Purpose</label>
+                    <textarea
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                      placeholder="Why do you need this resource?"
+                      rows={3}
+                      value={bookingForm.purpose}
+                      onChange={(e) =>
+                        setBookingForm((current) => ({ ...current, purpose: e.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700">Expected Attendees</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 placeholder-stone-400 focus:border-blue-500 focus:outline-none"
+                      type="number"
+                      placeholder="Number of people"
+                      value={bookingForm.expectedAttendees}
+                      onChange={(e) =>
+                        setBookingForm((current) => ({ ...current, expectedAttendees: e.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      className="flex-1 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
+                      type="submit"
+                    >
+                      Book
+                    </button>
+                    <button
+                      className="flex-1 rounded-full bg-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200"
+                      type="button"
+                      onClick={closeBookingModal}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
       </div>
     </SiteFrame>
   );

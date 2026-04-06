@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type StoredUser = {
   email: string;
@@ -13,23 +13,22 @@ type StoredUser = {
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<StoredUser | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
+  const [user, setUser] = useState<StoredUser | null>(null);
 
+  useEffect(() => {
     const raw = window.localStorage.getItem("smartcampusUser");
     if (!raw) {
-      return null;
+      setUser(null);
+      return;
     }
 
     try {
-      return JSON.parse(raw) as StoredUser;
+      setUser(JSON.parse(raw) as StoredUser);
     } catch {
       window.localStorage.removeItem("smartcampusUser");
-      return null;
+      setUser(null);
     }
-  });
+  }, []);
 
   const navItems = [
     { href: "/", label: "Home" },
