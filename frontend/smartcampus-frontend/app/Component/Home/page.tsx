@@ -1,92 +1,214 @@
 "use client";
 
 import Link from "next/link";
-import Nav from "./Nav";
-import Footer from "./Footer";
+import {
+  GlassPanel,
+  MetricTile,
+  PageHero,
+  SectionHeading,
+  SiteFrame,
+} from "../shared/SiteFrame";
+
+const quickActions = [
+  {
+    title: "Resource Directory",
+    description: "Browse labs, rooms, and equipment with live availability details.",
+    href: "/Component/resources",
+    tone: "from-green-100 to-white",
+  },
+  {
+    title: "Bookings Planner",
+    description: "Coordinate lectures, events, and shared space access from one place.",
+    href: "/Component/bookings",
+    tone: "from-green-50 to-white",
+  },
+  {
+    title: "Support Tickets",
+    description: "Report maintenance issues and track every update until resolution.",
+    href: "/Component/Ticket",
+    tone: "from-lime-100 to-white",
+  },
+  {
+    title: "Notifications",
+    description: "Stay on top of campus service changes, approvals, and reminders.",
+    href: "/Component/notifications",
+    tone: "from-emerald-100 to-white",
+  },
+];
+
+const workflow = [
+  {
+    step: "01",
+    title: "Discover spaces and services",
+    description: "Students and staff get a single front door to resources, bookings, and support.",
+  },
+  {
+    step: "02",
+    title: "Submit requests confidently",
+    description: "Forms, ticket actions, and account access stay clear and focused across devices.",
+  },
+  {
+    step: "03",
+    title: "Track progress visibly",
+    description: "Dashboards and updates make operational status easy to understand at a glance.",
+  },
+];
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 text-gray-800">
+    <SiteFrame accent="amber">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
+        <PageHero
+          eyebrow="Campus Control"
+          title="Run campus resources, requests, and support from one polished hub."
+          description="Smart Campus brings together resource discovery, booking coordination, maintenance tickets, and role-based dashboards in a cleaner operational experience."
+          actions={
+            <>
+              <Link
+                href="/Component/resources"
+                className="rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-amber-900/20 transition hover:brightness-105"
+              >
+                Explore Resources
+              </Link>
+              <Link
+                href="/Component/Ticket"
+                className="rounded-full border border-stone-300 bg-white/75 px-6 py-3 text-sm font-semibold text-stone-800 transition hover:bg-white"
+              >
+                Open Ticket Desk
+              </Link>
+            </>
+          }
+          aside={
+            <div className="flex h-full flex-col justify-between gap-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-green-200">Operations Pulse</p>
+                <h3 className="mt-4 max-w-sm text-3xl font-semibold tracking-[-0.04em]">
+                  Designed for admins, technicians, staff, and students.
+                </h3>
+              </div>
 
-      {/* 🔷 Navbar */}
-      <Nav />
-
-      {/* 🔷 Hero Section */}
-      <section className="text-center py-20 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-        <h2 className="text-4xl font-bold mb-4">
-          Smart Campus Operations Hub
-        </h2>
-        <p className="text-lg mb-6">
-          Manage bookings, facilities, and incident reports in one place
-        </p>
-
-        <div className="space-x-4">
-          <Link href="/Component/bookings">
-            <button className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg shadow hover:bg-gray-100">
-              Book Resource
-            </button>
-          </Link>
-
-          <Link href="/Component/Ticket">
-            <button className="px-6 py-3 border border-white rounded-lg hover:bg-white hover:text-blue-600">
-              Report Issue
-            </button>
-          </Link>
-        </div>
-      </section>
-
-      {/* 🔷 Quick Actions */}
-      <section className="py-16 px-10 grid md:grid-cols-4 gap-6">
-        {[
-          { title: "Book a Room", link: "/Component/bookings" },
-          { title: "View Resources", link: "/Component/resources" },
-          { title: "Report Issue", link: "/Component/Ticket" },
-          { title: "Notifications", link: "/Component/notifications" },
-        ].map((item, index) => (
-          <Link key={index} href={item.link}>
-            <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg cursor-pointer transition">
-              <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
-              <p className="text-sm text-gray-500">
-                Click to access {item.title.toLowerCase()}
-              </p>
+              <div className="grid gap-4">
+                <div className="float-gentle rounded-[1.5rem] border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur">
+                  <p className="text-xs uppercase tracking-[0.28em] text-green-200">Services</p>
+                  <p className="mt-3 text-4xl font-semibold">4</p>
+                  <p className="mt-2 text-sm text-slate-200">Resource access, bookings, tickets, and updates.</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
+                    <p className="text-xs uppercase tracking-[0.28em] text-green-200">Availability</p>
+                    <p className="mt-3 text-2xl font-semibold">Live</p>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
+                    <p className="text-xs uppercase tracking-[0.28em] text-green-200">Support</p>
+                    <p className="mt-3 text-2xl font-semibold">Tracked</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </Link>
-        ))}
-      </section>
+          }
+        />
 
-      {/* 🔷 Features */}
-      <section className="py-16 bg-gray-100 px-10">
-        <h2 className="text-2xl font-bold text-center mb-10">
-          Core Features
-        </h2>
+        <section className="grid gap-4 md:grid-cols-3">
+          <MetricTile
+            label="One Frontend"
+            value="Unified"
+            detail="A single visual language now carries the home page, workspaces, auth flow, and dashboards."
+          />
+          <MetricTile
+            label="Responsive"
+            value="Mobile Ready"
+            detail="Layouts collapse cleanly into stacked panels so the site remains usable on smaller screens."
+          />
+          <MetricTile
+            label="Operator Focus"
+            value="Fast Scan"
+            detail="Priority actions, status cards, and clean sectioning help users know where to go next."
+          />
+        </section>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h3 className="font-semibold text-lg mb-2">Facilities & Assets</h3>
-            <p className="text-gray-500 text-sm">
-              Manage lecture halls, labs, and equipment easily.
-            </p>
+        <section className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+          <GlassPanel>
+            <SectionHeading
+              eyebrow="Quick Access"
+              title="Jump straight into the task you need."
+              description="The entry points below give each area a clear role so users can move through the system without guessing."
+            />
+          </GlassPanel>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {quickActions.map((action, index) => (
+              <Link key={action.title} href={action.href} className="fade-up" style={{ animationDelay: `${index * 110}ms` }}>
+                <GlassPanel
+                  className={`h-full bg-[linear-gradient(145deg,rgba(255,255,255,0.88),rgba(255,255,255,0.6))] transition hover:-translate-y-1 hover:shadow-[0_18px_55px_rgba(33,24,13,0.14)]`}
+                >
+                  <div className={`rounded-[1.35rem] bg-gradient-to-br ${action.tone} p-4`}>
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-stone-500">
+                      Launch Area
+                    </p>
+                    <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-stone-950">
+                      {action.title}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 text-stone-600">{action.description}</p>
+                  </div>
+                </GlassPanel>
+              </Link>
+            ))}
           </div>
+        </section>
 
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h3 className="font-semibold text-lg mb-2">Booking System</h3>
-            <p className="text-gray-500 text-sm">
-              Request and manage bookings with approval workflow.
+        <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <GlassPanel>
+            <SectionHeading
+              eyebrow="How It Flows"
+              title="A calmer workflow for day-to-day campus operations."
+              description="The site now emphasizes wayfinding and readable status blocks so every part of the system feels connected."
+            />
+
+            <div className="mt-8 grid gap-4">
+              {workflow.map((item) => (
+                <div
+                  key={item.step}
+                  className="rounded-[1.5rem] border border-stone-900/10 bg-white/75 p-5"
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-950 text-sm font-semibold text-white">
+                      {item.step}
+                    </span>
+                    <div>
+                      <h3 className="text-xl font-semibold tracking-[-0.03em] text-stone-950">
+                        {item.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-7 text-stone-600">{item.description}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassPanel>
+
+          <GlassPanel className="bg-[linear-gradient(165deg,rgba(15,23,42,0.95),rgba(34,74,128,0.92))] text-slate-50">
+            <p className="text-xs uppercase tracking-[0.32em] text-green-200">Why This Design</p>
+            <h3 className="mt-4 text-3xl font-semibold tracking-[-0.04em]">
+              More intentional, less generic.
+            </h3>
+            <p className="mt-4 text-sm leading-7 text-slate-200">
+              The refreshed frontend uses warmer textures, stronger contrast, and clearer action
+              groupings so each page feels purposeful instead of looking like a default starter app.
             </p>
-          </div>
 
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h3 className="font-semibold text-lg mb-2">Incident Tickets</h3>
-            <p className="text-gray-500 text-sm">
-              Report issues and track resolution status.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 🔷 Footer */}
-      <Footer />
-
-    </div>
+            <div className="mt-8 grid gap-4">
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
+                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Visual System</p>
+                <p className="mt-3 text-lg font-semibold">Layered glass panels, sharper hierarchy, and richer gradients.</p>
+              </div>
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
+                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Usability</p>
+                <p className="mt-3 text-lg font-semibold">Cleaner nav, clearer page heroes, and better-scanning content blocks.</p>
+              </div>
+            </div>
+          </GlassPanel>
+        </section>
+      </div>
+    </SiteFrame>
   );
 }

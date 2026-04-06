@@ -1,8 +1,6 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import Footer from "../Home/Footer";
-import Nav from "../Home/Nav";
 import {
   API_BASE_URL,
   defaultResourceForm,
@@ -20,6 +18,7 @@ import {
   SelectField,
   TextAreaField,
 } from "../shared/CampusUi";
+import { SiteFrame } from "../shared/SiteFrame";
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -108,13 +107,8 @@ export default function ResourcesPage() {
   const activeResources = resources.filter((resource) => resource.status === "ACTIVE").length;
 
   return (
-    <div>
-      <Nav />
-      <main
-        className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_40%),linear-gradient(180deg,_#eef6ff_0%,_#ddeefe_48%,_#c8dff7_100%)] px-4 py-8 text-stone-900 sm:px-6 lg:px-8"
-        suppressHydrationWarning
-      >
-        <div className="mx-auto max-w-7xl">
+    <SiteFrame accent="sky">
+      <div className="mx-auto max-w-7xl">
           <DashboardHero
             description="This resource workspace is wired to your Spring Boot backend on port 8081 so you can register labs, rooms, and equipment, then update live availability from one page."
             eyebrow="Smart Campus Resource Desk"
@@ -208,7 +202,7 @@ export default function ResourcesPage() {
                 />
 
                 <button
-                  className="mt-2 rounded-full bg-sky-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-600"
+                  className="mt-2 rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105"
                   type="submit"
                 >
                   Save Resource
@@ -237,7 +231,7 @@ export default function ResourcesPage() {
                             {resource.description}
                           </p>
                         </div>
-                        <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800">
+                        <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">
                           {resource.status}
                         </span>
                       </div>
@@ -253,7 +247,7 @@ export default function ResourcesPage() {
 
                       <div className="mt-5 flex flex-wrap gap-3">
                         <button
-                          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+                          className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
                           onClick={() => void updateResourceStatus(resource.id, "ACTIVE")}
                           type="button"
                         >
@@ -280,9 +274,7 @@ export default function ResourcesPage() {
               </div>
             </Panel>
           </section>
-        </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </SiteFrame>
   );
 }

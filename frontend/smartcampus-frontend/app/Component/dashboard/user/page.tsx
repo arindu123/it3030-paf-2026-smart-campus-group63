@@ -1,19 +1,26 @@
 "use client";
 
-import Nav from "../../Home/Nav";
-import Footer from "../../Home/Footer";
+import { RoleDashboard } from "../../shared/RoleDashboard";
 
 export default function UserDashboardPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 text-gray-800">
-      <Nav />
-      <main className="flex-1 px-6 py-10">
-        <section className="mx-auto max-w-5xl rounded-2xl bg-white p-8 shadow">
-          <h1 className="text-3xl font-bold">User Dashboard</h1>
-          <p className="mt-3 text-gray-600">Create bookings and submit support tickets.</p>
-        </section>
-      </main>
-      <Footer />
-    </div>
+    <RoleDashboard
+      accent="amber"
+      eyebrow="User Dashboard"
+      title="Manage your bookings, resources, and support requests with more clarity."
+      description="The user dashboard now acts as a cleaner home base for students and staff who need quick access to spaces, requests, and notifications."
+      ctaHref="/Component/resources"
+      ctaLabel="Browse Resources"
+      metrics={[
+        { label: "Primary Goal", value: "Self-Service", detail: "Users should be able to find what they need without friction." },
+        { label: "Path", value: "Resources First", detail: "Discover spaces, then move into bookings or issue reporting." },
+        { label: "Support", value: "Visible", detail: "Ticket and notification pathways are easier to discover from here." },
+      ]}
+      priorities={[
+        "Browse campus spaces and equipment",
+        "Create or follow maintenance requests",
+        "Check updates and approval outcomes",
+      ]}
+    />
   );
 }
