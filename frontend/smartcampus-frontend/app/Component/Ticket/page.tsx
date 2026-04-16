@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
 import {
+  Attachment,
   API_BASE_URL,
   defaultTicketForm,
   fetchJson,
@@ -23,9 +24,31 @@ import { SiteFrame } from "../shared/SiteFrame";
 export default function TicketPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketForm, setTicketForm] = useState<TicketForm>(defaultTicketForm);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [attachmentsByTicket, setAttachmentsByTicket] = useState<Record<number, Attachment[]>>({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Backend connected. Ready to manage maintenance tickets.");
   const [error, setError] = useState("");
+
+  const loadTicketAttachments = useCallback(async (ticketList: Ticket[]) => {
+    const attachmentEntries = await Promise.all(
+      ticketList.map(async (ticket) => {
+        try {
+          const attachments = await fetchJson<Attachment[]>(`${API_BASE_URL}/attachments/${ticket.id}`);
+          return [ticket.id, attachments] as const;
+        } catch {
+          return [ticket.id, []] as const;
+        }
+      })
+    );
+
+    const attachmentMap: Record<number, Attachment[]> = {};
+    for (const [ticketId, attachmentList] of attachmentEntries) {
+      attachmentMap[ticketId] = attachmentList;
+    }
+
+    setAttachmentsByTicket(attachmentMap);
+  }, []);
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
@@ -34,24 +57,56 @@ export default function TicketPage() {
     try {
       const ticketData = await fetchJson<Ticket[]>(`${API_BASE_URL}/tickets`);
       setTickets(ticketData);
+      await loadTicketAttachments(ticketData);
       setMessage("Ticket dashboard synced with backend API.");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load backend data.");
+      setAttachmentsByTicket({});
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadTicketAttachments]);
 
   useEffect(() => {
     void loadTickets();
   }, [loadTickets]);
+
+  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+
+    if (files.length > 3) {
+      setError("You can upload up to 3 photos per ticket.");
+      setSelectedFiles(files.slice(0, 3));
+      return;
+    }
+
+    setError("");
+    setSelectedFiles(files);
+  }
+
+  async function uploadSelectedFiles(ticketId: number, files: File[]) {
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${API_BASE_URL}/attachments/${ticketId}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to upload attachment: ${file.name}`);
+      }
+    }
+  }
 
   async function createTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
     try {
-      await fetchJson<Ticket>(`${API_BASE_URL}/tickets`, {
+      const createdTicket = await fetchJson<Ticket>(`${API_BASE_URL}/tickets`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -59,8 +114,17 @@ export default function TicketPage() {
         body: JSON.stringify(ticketForm),
       });
 
+      if (selectedFiles.length > 0) {
+        await uploadSelectedFiles(createdTicket.id, selectedFiles);
+      }
+
       setTicketForm(defaultTicketForm);
-      setMessage("Ticket created successfully.");
+      setSelectedFiles([]);
+      setMessage(
+        selectedFiles.length > 0
+          ? "Ticket created successfully with attachments."
+          : "Ticket created successfully."
+      );
       await loadTickets();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Failed to create ticket.");
@@ -196,6 +260,34 @@ export default function TicketPage() {
                 />
 
                 <div className="grid gap-4 md:grid-cols-2">
+                  <Field
+                    label="Resource"
+                    onChange={(value) =>
+                      setTicketForm((current) => ({ ...current, resource: value }))
+                    }
+                    placeholder="Projector / Lab 3"
+                    value={ticketForm.resource}
+                  />
+                  <Field
+                    label="Location"
+                    onChange={(value) =>
+                      setTicketForm((current) => ({ ...current, location: value }))
+                    }
+                    placeholder="Block A - 2nd Floor"
+                    value={ticketForm.location}
+                  />
+                </div>
+
+                <Field
+                  label="Contact Number"
+                  onChange={(value) =>
+                    setTicketForm((current) => ({ ...current, contactNumber: value }))
+                  }
+                  placeholder="0771234567"
+                  value={ticketForm.contactNumber}
+                />
+
+                <div className="grid gap-4 md:grid-cols-2">
                   <SelectField
                     label="Priority"
                     onChange={(value) =>
@@ -213,6 +305,32 @@ export default function TicketPage() {
                     value={ticketForm.category}
                   />
                 </div>
+
+                <TextAreaField
+                  label="Comments"
+                  onChange={(value) =>
+                    setTicketForm((current) => ({ ...current, comments: value }))
+                  }
+                  placeholder="Any extra details or admin/user comments"
+                  value={ticketForm.comments}
+                />
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700">
+                  Photos (max 3)
+                  <input
+                    accept="image/*"
+                    className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 file:mr-3 file:rounded-full file:border-0 file:bg-stone-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-stone-700 hover:file:bg-stone-200"
+                    multiple
+                    onChange={handleFileSelection}
+                    type="file"
+                  />
+                </label>
+
+                {selectedFiles.length > 0 ? (
+                  <p className="text-xs text-stone-600">
+                    Selected: {selectedFiles.map((file) => file.name).join(", ")}
+                  </p>
+                ) : null}
 
                 <button
                   className="mt-2 rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105"
@@ -253,10 +371,40 @@ export default function TicketPage() {
                         <p>Priority: {ticket.priority || "N/A"}</p>
                         <p>Category: {ticket.category || "N/A"}</p>
                         <p>Created By: {ticket.createdBy || "N/A"}</p>
+                        <p>Resource: {ticket.resource || "N/A"}</p>
+                        <p>Location: {ticket.location || "N/A"}</p>
+                        <p>Contact: {ticket.contactNumber || "N/A"}</p>
                         <p>Assigned To: {ticket.assignedTo || "Not assigned"}</p>
+                        <p className="md:col-span-2">
+                          Comments: {ticket.comments || "No comments yet"}
+                        </p>
                         <p className="md:col-span-2">
                           Resolution Note: {ticket.resolutionNote || "No note yet"}
                         </p>
+                        <div className="md:col-span-2">
+                          <p className="font-medium text-stone-700">Photos:</p>
+                          {attachmentsByTicket[ticket.id]?.length ? (
+                            <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                              {attachmentsByTicket[ticket.id].map((attachment) => (
+                                <div
+                                  key={attachment.id}
+                                  className="overflow-hidden rounded-xl border border-stone-200 bg-white"
+                                >
+                                  <img
+                                    alt={attachment.fileName}
+                                    className="h-28 w-full bg-stone-100 object-cover"
+                                    src={`${API_BASE_URL}/attachments/file/${attachment.id}`}
+                                  />
+                                  <p className="truncate px-2 py-1 text-xs text-stone-600" title={attachment.fileName}>
+                                    {attachment.fileName}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p>No photos uploaded</p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-5 flex flex-wrap gap-3">

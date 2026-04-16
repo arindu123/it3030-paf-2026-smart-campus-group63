@@ -39,5 +39,4 @@ data/*.lock.db
 
 ### Local secrets / helper scripts ###
 .env.local
-application-local.properties
 run-backend-local.ps1

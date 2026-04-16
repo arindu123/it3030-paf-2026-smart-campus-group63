@@ -3,6 +3,7 @@ package com.sliit.smartcampus.entity;
 import com.sliit.smartcampus.enums.TicketCategory;
 import com.sliit.smartcampus.enums.TicketPriority;
 import com.sliit.smartcampus.enums.TicketStatus;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -33,6 +34,12 @@ public class Ticket {
 
     private String createdBy;
     private LocalDateTime createdAt;
+    private String resource;
+    private String location;
+    private String contactNumber;
+
+    @Column(length = 2000)
+    private String comments;
 
     private String resolutionNote;
     private String assignedTo;
@@ -99,6 +106,38 @@ public class Ticket {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getResource() {
+        return resource;
+    }
+
+    public void setResource(String resource) {
+        this.resource = resource;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getContactNumber() {
+        return contactNumber;
+    }
+
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 
     public String getResolutionNote() {
