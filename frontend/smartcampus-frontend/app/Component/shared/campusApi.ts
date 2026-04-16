@@ -6,6 +6,9 @@ export const ticketPriorities = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 export const ticketCategories = ["ELECTRICAL", "NETWORK", "EQUIPMENT", "CLEANING", "OTHER"] as const;
 export const resourceTypes = ["ROOM", "LAB", "EQUIPMENT"] as const;
 export const resourceStatuses = ["ACTIVE", "OUT_OF_SERVICE"] as const;
+export const userRoles = ["USER", "ADMIN", "TECHNICIAN"] as const;
+
+export type UserRole = (typeof userRoles)[number];
 
 export type Ticket = {
   id: number;
@@ -42,6 +45,19 @@ export type Booking = {
   expectedAttendees: number;
   status: string;
   resourceName?: string;
+};
+
+export type AdminUser = {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  department: string;
+  role: UserRole;
+  provider?: string;
+  lastLoginAt?: string | null;
+  lastSeenAt?: string | null;
+  online?: boolean;
 };
 
 export type TicketForm = {

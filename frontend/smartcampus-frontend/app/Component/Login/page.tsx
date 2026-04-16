@@ -11,8 +11,18 @@ type LoginResult = {
   message: string;
   email?: string;
   fullName?: string;
-  role?: "USER" | "ADMIN" | "TECHNICIAN";
+  role?: string;
 };
+
+function normalizeRole(role?: string | null): "USER" | "ADMIN" | "TECHNICIAN" {
+  const value = (role || "").toUpperCase();
+
+  if (value === "ADMIN" || value === "TECHNICIAN") {
+    return value;
+  }
+
+  return "USER";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,12 +34,14 @@ export default function LoginPage() {
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  function getDashboardByRole(role?: "USER" | "ADMIN" | "TECHNICIAN") {
-    if (role === "ADMIN") {
+  function getDashboardByRole(role?: string | null) {
+    const normalizedRole = normalizeRole(role);
+
+    if (normalizedRole === "ADMIN") {
       return "/Component/dashboard/admin";
     }
 
-    if (role === "TECHNICIAN") {
+    if (normalizedRole === "TECHNICIAN") {
       return "/Component/dashboard/technician";
     }
 
@@ -42,7 +54,7 @@ export default function LoginPage() {
     if (oauthStatus === "success") {
       const oauthEmail = searchParams.get("email") || "";
       const oauthFullName = searchParams.get("fullName") || "";
-      const oauthRole = (searchParams.get("role") as "USER" | "ADMIN" | "TECHNICIAN" | null) || "USER";
+      const oauthRole = normalizeRole(searchParams.get("role"));
 
       window.localStorage.setItem(
         "smartcampusUser",
@@ -92,7 +104,7 @@ export default function LoginPage() {
         JSON.stringify({
           email: data.email || email,
           fullName: data.fullName || "",
-          role: data.role || "USER",
+          role: normalizeRole(data.role),
           rememberMe,
         })
       );
