@@ -8,8 +8,11 @@ import com.sliit.smartcampus.enums.UserRole;
 import com.sliit.smartcampus.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
 
 @Service
 public class UserService {
@@ -49,6 +52,8 @@ public class UserService {
         user.setDepartment(request.getDepartment());
         user.setRole(UserRole.USER);
         user.setProvider(AuthProvider.LOCAL);
+        user.setLastLoginAt(null);
+        user.setLastSeenAt(null);
 
         return userRepository.save(user);
     }
@@ -114,7 +119,55 @@ public class UserService {
         newUser.setRole(UserRole.USER);
         newUser.setProvider(AuthProvider.GOOGLE);
         newUser.setProviderId(providerId);
+        newUser.setLastLoginAt(null);
+        newUser.setLastSeenAt(null);
 
         return userRepository.save(newUser);
+    }
+
+    public User recordLogin(User user) {
+        user.setLastLoginAt(Instant.now());
+        user.setLastSeenAt(Instant.now());
+        return userRepository.save(user);
+    }
+
+    public User recordHeartbeat(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        user.setLastSeenAt(Instant.now());
+        return userRepository.save(user);
+    }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User updateUserRole(Long id, UserRole newRole) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (newRole == null) {
+            throw new IllegalArgumentException("Role is required");
+        }
+
+        if (user.getRole() == UserRole.ADMIN && newRole != UserRole.ADMIN
+            && userRepository.countByRole(UserRole.ADMIN) <= 1) {
+            throw new IllegalArgumentException("Cannot remove the last admin account");
+        }
+
+        user.setRole(newRole);
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (user.getRole() == UserRole.ADMIN && userRepository.countByRole(UserRole.ADMIN) <= 1) {
+            throw new IllegalArgumentException("Cannot delete the last admin account");
+        }
+
+        userRepository.delete(user);
     }
 }
