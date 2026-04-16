@@ -18,9 +18,21 @@ export type Ticket = {
   priority: string;
   category: string;
   createdBy: string;
+  resource?: string;
+  location?: string;
+  contactNumber?: string;
+  comments?: string;
   createdAt?: string;
   assignedTo?: string;
   resolutionNote?: string;
+};
+
+export type Attachment = {
+  id: number;
+  fileName: string;
+  fileType: string;
+  filePath: string;
+  ticketId: number;
 };
 
 export type Resource = {
@@ -66,6 +78,10 @@ export type TicketForm = {
   priority: string;
   category: string;
   createdBy: string;
+  resource: string;
+  location: string;
+  contactNumber: string;
+  comments: string;
 };
 
 export type ResourceForm = {
@@ -94,6 +110,10 @@ export const defaultTicketForm: TicketForm = {
   priority: "HIGH",
   category: "EQUIPMENT",
   createdBy: "student1",
+  resource: "",
+  location: "",
+  contactNumber: "",
+  comments: "",
 };
 
 export const defaultResourceForm: ResourceForm = {

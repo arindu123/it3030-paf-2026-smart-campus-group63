@@ -44,4 +44,9 @@ public class AttachmentService {
     public List<Attachment> getAttachmentsByTicketId(Long ticketId) {
         return attachmentRepository.findByTicketId(ticketId);
     }
+
+    public Attachment getAttachmentById(Long attachmentId) {
+        return attachmentRepository.findById(attachmentId)
+            .orElseThrow(() -> new RuntimeException("Attachment not found with id: " + attachmentId));
+    }
 }
