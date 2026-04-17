@@ -1,7 +1,5 @@
 param(
-    [int]$Port = 8089,
-    [ValidateSet("local", "shared")]
-    [string]$Profile = "local"
+    [int]$Port = 8089
 )
 
 $existingConnection = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
@@ -14,7 +12,7 @@ if ($existingConnection) {
     Start-Sleep -Seconds 1
 }
 
-Write-Host "Starting Smart Campus backend on port $Port using profile '$Profile'..."
+Write-Host "Starting Smart Campus backend on port $Port using profile 'shared'..."
 $env:SERVER_PORT = "$Port"
-$env:SPRING_PROFILES_ACTIVE = $Profile
+$env:SPRING_PROFILES_ACTIVE = "shared"
 & ".\mvnw.cmd" spring-boot:run

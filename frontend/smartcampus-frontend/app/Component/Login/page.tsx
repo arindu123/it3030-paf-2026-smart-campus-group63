@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { API_BASE_URL, GOOGLE_AUTH_URL } from "../shared/campusApi";
@@ -24,7 +24,7 @@ function normalizeRole(role?: string | null): "USER" | "ADMIN" | "TECHNICIAN" {
   return "USER";
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -213,5 +213,13 @@ export default function LoginPage() {
         </GlassPanel>
       </div>
     </SiteFrame>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

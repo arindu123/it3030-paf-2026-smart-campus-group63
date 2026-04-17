@@ -10,4 +10,8 @@ import java.util.List;
 @Repository
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByStatus(TicketStatus status);
+    List<Ticket> findByCreatedByUser_IdOrderByCreatedAtDesc(Long createdByUserId);
+    List<Ticket> findByCreatedByOrderByCreatedAtDesc(String createdBy);
+    List<Ticket> findByAssignedToUser_IdOrderByCreatedAtDesc(Long assignedToUserId);
+    List<Ticket> findAllByOrderByCreatedAtDesc();
 }

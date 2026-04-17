@@ -1,15 +1,23 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Attachment,
+  AdminUser,
   API_BASE_URL,
   defaultTicketForm,
   fetchJson,
+  getStoredUser,
+  normalizeRole,
   Ticket,
+  TicketComment,
   TicketForm,
   ticketCategories,
   ticketPriorities,
+  ticketStatuses,
+  TicketStatus,
+  UserRole,
+  withActorHeaders,
 } from "../shared/campusApi";
 import {
   DashboardHero,
@@ -22,54 +30,95 @@ import {
 import { SiteFrame } from "../shared/SiteFrame";
 
 export default function TicketPage() {
+  const router = useRouter();
+  const [actorEmail, setActorEmail] = useState<string>("");
+  const [actorRole, setActorRole] = useState<UserRole>("USER");
+
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | TicketStatus>("ALL");
+  const [technicians, setTechnicians] = useState<AdminUser[]>([]);
+
   const [ticketForm, setTicketForm] = useState<TicketForm>(defaultTicketForm);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [attachmentsByTicket, setAttachmentsByTicket] = useState<Record<number, Attachment[]>>({});
+
+  const [commentDraftByTicket, setCommentDraftByTicket] = useState<Record<number, string>>({});
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
+
+  const [progressDraftByTicket, setProgressDraftByTicket] = useState<Record<number, string>>({});
+  const [resolutionDraftByTicket, setResolutionDraftByTicket] = useState<Record<number, string>>({});
+  const [rejectionReasonByTicket, setRejectionReasonByTicket] = useState<Record<number, string>>({});
+  const [assignmentByTicket, setAssignmentByTicket] = useState<Record<number, string>>({});
+
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("Backend connected. Ready to manage maintenance tickets.");
+  const [message, setMessage] = useState("Ticket desk is ready.");
   const [error, setError] = useState("");
 
-  const loadTicketAttachments = useCallback(async (ticketList: Ticket[]) => {
-    const attachmentEntries = await Promise.all(
-      ticketList.map(async (ticket) => {
-        try {
-          const attachments = await fetchJson<Attachment[]>(`${API_BASE_URL}/attachments/${ticket.id}`);
-          return [ticket.id, attachments] as const;
-        } catch {
-          return [ticket.id, []] as const;
-        }
-      })
-    );
+  const authFetchJson = useCallback(
+    async <T,>(url: string, init?: RequestInit) => {
+      return fetchJson<T>(url, withActorHeaders(init));
+    },
+    []
+  );
 
-    const attachmentMap: Record<number, Attachment[]> = {};
-    for (const [ticketId, attachmentList] of attachmentEntries) {
-      attachmentMap[ticketId] = attachmentList;
+  useEffect(() => {
+    const user = getStoredUser();
+    if (!user?.email) {
+      router.replace("/Component/Login");
+      return;
     }
 
-    setAttachmentsByTicket(attachmentMap);
-  }, []);
+    setActorEmail(user.email);
+    setActorRole(normalizeRole(user.role));
+  }, [router]);
 
-  const loadTickets = useCallback(async () => {
+  const loadTickets = useCallback(async (selectedStatus: "ALL" | TicketStatus = statusFilter) => {
+    if (!actorEmail) {
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      const ticketData = await fetchJson<Ticket[]>(`${API_BASE_URL}/tickets`);
+      const suffix =
+        selectedStatus === "ALL"
+          ? ""
+          : `?status=${encodeURIComponent(selectedStatus)}`;
+      const ticketData = await authFetchJson<Ticket[]>(`${API_BASE_URL}/tickets${suffix}`);
       setTickets(ticketData);
-      await loadTicketAttachments(ticketData);
       setMessage("Ticket dashboard synced with backend API.");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load backend data.");
-      setAttachmentsByTicket({});
     } finally {
       setLoading(false);
     }
-  }, [loadTicketAttachments]);
+  }, [actorEmail, authFetchJson, statusFilter]);
 
   useEffect(() => {
+    if (!actorEmail) {
+      return;
+    }
     void loadTickets();
-  }, [loadTickets]);
+  }, [actorEmail, loadTickets]);
+
+  useEffect(() => {
+    if (actorRole !== "ADMIN" || !actorEmail) {
+      return;
+    }
+
+    async function loadTechnicians() {
+      try {
+        const users = await authFetchJson<AdminUser[]>(`${API_BASE_URL}/admin/users`);
+        const techs = users.filter((user) => normalizeRole(user.role) === "TECHNICIAN");
+        setTechnicians(techs);
+      } catch {
+        setTechnicians([]);
+      }
+    }
+
+    void loadTechnicians();
+  }, [actorRole, actorEmail, authFetchJson]);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -85,19 +134,23 @@ export default function TicketPage() {
   }
 
   async function uploadSelectedFiles(ticketId: number, files: File[]) {
+    if (files.length === 0) {
+      return;
+    }
+
+    const formData = new FormData();
     for (const file of files) {
-      const formData = new FormData();
-      formData.append("file", file);
+      formData.append("files", file);
+    }
 
-      const response = await fetch(`${API_BASE_URL}/attachments/${ticketId}`, {
-        method: "POST",
-        body: formData,
-      });
+    const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/attachments`, withActorHeaders({
+      method: "POST",
+      body: formData,
+    }));
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Failed to upload attachment: ${file.name}`);
-      }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to upload ticket attachments.");
     }
   }
 
@@ -106,12 +159,23 @@ export default function TicketPage() {
     setError("");
 
     try {
-      const createdTicket = await fetchJson<Ticket>(`${API_BASE_URL}/tickets`, {
+      const createdTicket = await authFetchJson<Ticket>(`${API_BASE_URL}/tickets`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(ticketForm),
+        body: JSON.stringify({
+          title: ticketForm.title,
+          description: ticketForm.description,
+          category: ticketForm.category,
+          priority: ticketForm.priority,
+          preferredContactDetails: ticketForm.preferredContactDetails,
+          relatedResourceId: ticketForm.relatedResourceId
+            ? Number(ticketForm.relatedResourceId)
+            : undefined,
+          relatedResource: ticketForm.relatedResource || undefined,
+          relatedLocation: ticketForm.relatedLocation || undefined,
+        }),
       });
 
       if (selectedFiles.length > 0) {
@@ -125,70 +189,199 @@ export default function TicketPage() {
           ? "Ticket created successfully with attachments."
           : "Ticket created successfully."
       );
-      await loadTickets();
+      await loadTickets(statusFilter);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Failed to create ticket.");
     }
   }
 
-  async function updateTicketStatus(id: number, status: string) {
+  async function updateTicketStatus(id: number, status: TicketStatus) {
     setError("");
 
     try {
-      await fetchJson<Ticket>(`${API_BASE_URL}/tickets/${id}/status?status=${status}`, {
-        method: "PUT",
+      await authFetchJson<Ticket>(`${API_BASE_URL}/tickets/${id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
       });
 
       setMessage(`Ticket #${id} updated to ${status}.`);
-      await loadTickets();
+      await loadTickets(statusFilter);
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Failed to update ticket status.");
     }
   }
 
   async function assignTech(id: number) {
-    const techName = window.prompt("Enter technician name", "tech1");
-    if (!techName) {
+    const technicianEmail = assignmentByTicket[id]?.trim();
+    if (!technicianEmail) {
+      setError("Select a technician first.");
       return;
     }
 
     setError("");
 
     try {
-      await fetchJson<Ticket>(
-        `${API_BASE_URL}/tickets/${id}/assign?tech=${encodeURIComponent(techName)}`,
-        {
-          method: "PUT",
-        }
-      );
+      await authFetchJson<Ticket>(`${API_BASE_URL}/tickets/${id}/assign`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ technicianEmail }),
+      });
 
       setMessage(`Technician assigned to ticket #${id}.`);
-      await loadTickets();
+      await loadTickets(statusFilter);
     } catch (assignError) {
       setError(assignError instanceof Error ? assignError.message : "Failed to assign technician.");
     }
   }
 
   async function addResolutionNote(id: number) {
-    const note = window.prompt("Enter resolution note");
+    const note = resolutionDraftByTicket[id]?.trim();
     if (!note) {
+      setError("Add a resolution note before saving.");
       return;
     }
 
     setError("");
 
     try {
-      await fetchJson<Ticket>(
-        `${API_BASE_URL}/tickets/${id}/resolution-note?note=${encodeURIComponent(note)}`,
-        {
-          method: "PUT",
-        }
-      );
+      await authFetchJson<Ticket>(`${API_BASE_URL}/tickets/${id}/resolution`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ resolutionNote: note }),
+      });
 
+      setResolutionDraftByTicket((current) => ({ ...current, [id]: "" }));
       setMessage(`Resolution note added to ticket #${id}.`);
-      await loadTickets();
+      await loadTickets(statusFilter);
     } catch (noteError) {
       setError(noteError instanceof Error ? noteError.message : "Failed to update note.");
+    }
+  }
+
+  async function rejectTicket(id: number) {
+    const reason = rejectionReasonByTicket[id]?.trim();
+    if (!reason) {
+      setError("Provide a rejection reason.");
+      return;
+    }
+
+    setError("");
+
+    try {
+      await authFetchJson<Ticket>(`${API_BASE_URL}/tickets/${id}/reject`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reason }),
+      });
+
+      setRejectionReasonByTicket((current) => ({ ...current, [id]: "" }));
+      setMessage(`Ticket #${id} rejected.`);
+      await loadTickets(statusFilter);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to reject ticket.");
+    }
+  }
+
+  async function addProgressUpdate(ticketId: number) {
+    const updateText = progressDraftByTicket[ticketId]?.trim();
+    if (!updateText) {
+      setError("Type a progress update first.");
+      return;
+    }
+
+    setError("");
+
+    try {
+      await authFetchJson(`${API_BASE_URL}/tickets/${ticketId}/progress-updates`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ updateText }),
+      });
+
+      setProgressDraftByTicket((current) => ({ ...current, [ticketId]: "" }));
+      setMessage(`Progress update added to ticket #${ticketId}.`);
+      await loadTickets(statusFilter);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to add progress update.");
+    }
+  }
+
+  async function addComment(ticketId: number) {
+    const commentText = commentDraftByTicket[ticketId]?.trim();
+    if (!commentText) {
+      setError("Comment text is required.");
+      return;
+    }
+
+    setError("");
+
+    try {
+      await authFetchJson(`${API_BASE_URL}/tickets/${ticketId}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ commentText }),
+      });
+
+      setCommentDraftByTicket((current) => ({ ...current, [ticketId]: "" }));
+      setMessage(`Comment added to ticket #${ticketId}.`);
+      await loadTickets(statusFilter);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to add comment.");
+    }
+  }
+
+  async function saveEditedComment(commentId: number) {
+    const commentText = editingCommentText.trim();
+    if (!commentText) {
+      setError("Comment text is required.");
+      return;
+    }
+
+    setError("");
+
+    try {
+      await authFetchJson(`${API_BASE_URL}/tickets/comments/${commentId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ commentText }),
+      });
+
+      setEditingCommentId(null);
+      setEditingCommentText("");
+      setMessage("Comment updated.");
+      await loadTickets(statusFilter);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to update comment.");
+    }
+  }
+
+  async function deleteComment(commentId: number) {
+    setError("");
+
+    try {
+      await authFetchJson(`${API_BASE_URL}/tickets/comments/${commentId}`, {
+        method: "DELETE",
+      });
+
+      setMessage("Comment deleted.");
+      await loadTickets(statusFilter);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to delete comment.");
     }
   }
 
@@ -196,18 +389,37 @@ export default function TicketPage() {
     setError("");
 
     try {
-      await fetchJson<void>(`${API_BASE_URL}/tickets/${id}`, {
+      await authFetchJson<void>(`${API_BASE_URL}/tickets/${id}`, {
         method: "DELETE",
       });
 
       setMessage(`Ticket #${id} deleted.`);
-      await loadTickets();
+      await loadTickets(statusFilter);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete ticket.");
     }
   }
 
   const resolvedTickets = tickets.filter((ticket) => ticket.status === "RESOLVED").length;
+  const openTickets = tickets.filter((ticket) => ticket.status === "OPEN").length;
+
+  const statusOptions = useMemo(() => ["ALL", ...ticketStatuses] as const, []);
+
+  function canManageTicket(ticket: Ticket) {
+    if (actorRole === "ADMIN") {
+      return true;
+    }
+
+    return actorRole === "TECHNICIAN" && ticket.assignedTo === actorEmail;
+  }
+
+  function canManageComment(comment: TicketComment) {
+    if (actorRole === "ADMIN") {
+      return true;
+    }
+
+    return comment.owner.toLowerCase() === actorEmail.toLowerCase();
+  }
 
   return (
     <SiteFrame accent="amber">
@@ -220,6 +432,7 @@ export default function TicketPage() {
             onRefresh={() => void loadTickets()}
             stats={[
               { label: "Tickets", value: String(tickets.length), tone: "warm" },
+              { label: "Open", value: String(openTickets), tone: "cool" },
               { label: "Resolved", value: String(resolvedTickets), tone: "cool" },
               { label: "Backend", value: loading ? "Syncing" : "Online", tone: "dark" },
             ]}
@@ -240,14 +453,14 @@ export default function TicketPage() {
                     placeholder="Projector not working"
                     value={ticketForm.title}
                   />
-                  <Field
-                    label="Created By"
-                    onChange={(value) =>
-                      setTicketForm((current) => ({ ...current, createdBy: value }))
-                    }
-                    placeholder="student1"
-                    value={ticketForm.createdBy}
-                  />
+                  <label className="grid gap-2 text-sm font-medium text-stone-700">
+                    Created By
+                    <input
+                      className="rounded-2xl border border-stone-200 bg-stone-100 px-4 py-3 text-sm text-stone-700 outline-none"
+                      readOnly
+                      value={actorEmail}
+                    />
+                  </label>
                 </div>
 
                 <TextAreaField
@@ -261,37 +474,40 @@ export default function TicketPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field
-                    label="Resource"
+                    label="Related Resource"
                     onChange={(value) =>
-                      setTicketForm((current) => ({ ...current, resource: value }))
+                      setTicketForm((current) => ({ ...current, relatedResource: value }))
                     }
                     placeholder="Projector / Lab 3"
-                    value={ticketForm.resource}
+                    value={ticketForm.relatedResource}
                   />
                   <Field
                     label="Location"
                     onChange={(value) =>
-                      setTicketForm((current) => ({ ...current, location: value }))
+                      setTicketForm((current) => ({ ...current, relatedLocation: value }))
                     }
                     placeholder="Block A - 2nd Floor"
-                    value={ticketForm.location}
+                    value={ticketForm.relatedLocation}
                   />
                 </div>
 
                 <Field
-                  label="Contact Number"
+                  label="Related Resource ID (optional)"
                   onChange={(value) =>
-                    setTicketForm((current) => ({ ...current, contactNumber: value }))
+                    setTicketForm((current) => ({ ...current, relatedResourceId: value }))
                   }
-                  placeholder="0771234567"
-                  value={ticketForm.contactNumber}
+                  placeholder="e.g. 12"
+                  value={ticketForm.relatedResourceId}
                 />
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <SelectField
                     label="Priority"
                     onChange={(value) =>
-                      setTicketForm((current) => ({ ...current, priority: value }))
+                      setTicketForm((current) => ({
+                        ...current,
+                        priority: value as (typeof ticketPriorities)[number],
+                      }))
                     }
                     options={ticketPriorities}
                     value={ticketForm.priority}
@@ -299,7 +515,10 @@ export default function TicketPage() {
                   <SelectField
                     label="Category"
                     onChange={(value) =>
-                      setTicketForm((current) => ({ ...current, category: value }))
+                      setTicketForm((current) => ({
+                        ...current,
+                        category: value as (typeof ticketCategories)[number],
+                      }))
                     }
                     options={ticketCategories}
                     value={ticketForm.category}
@@ -307,12 +526,12 @@ export default function TicketPage() {
                 </div>
 
                 <TextAreaField
-                  label="Comments"
+                  label="Preferred Contact Details"
                   onChange={(value) =>
-                    setTicketForm((current) => ({ ...current, comments: value }))
+                    setTicketForm((current) => ({ ...current, preferredContactDetails: value }))
                   }
-                  placeholder="Any extra details or admin/user comments"
-                  value={ticketForm.comments}
+                  placeholder="Mobile / email / best time to call"
+                  value={ticketForm.preferredContactDetails}
                 />
 
                 <label className="grid gap-2 text-sm font-medium text-stone-700">
@@ -344,8 +563,21 @@ export default function TicketPage() {
             <Panel
               eyebrow="Tickets"
               title="Current ticket queue"
-              description="Update statuses, assign technicians, and attach a resolution note from here."
+              description="View full details, comments, progress updates, assignment, and workflow transitions."
             >
+              <div className="mb-4">
+                <SelectField
+                  label="Filter by status"
+                  onChange={(value) => {
+                    const selected = value as "ALL" | TicketStatus;
+                    setStatusFilter(selected);
+                    void loadTickets(selected);
+                  }}
+                  options={statusOptions}
+                  value={statusFilter}
+                />
+              </div>
+
               <div className="space-y-4">
                 {tickets.length === 0 ? (
                   <EmptyState text="No tickets yet. Create your first one from the form on this page." />
@@ -371,21 +603,22 @@ export default function TicketPage() {
                         <p>Priority: {ticket.priority || "N/A"}</p>
                         <p>Category: {ticket.category || "N/A"}</p>
                         <p>Created By: {ticket.createdBy || "N/A"}</p>
-                        <p>Resource: {ticket.resource || "N/A"}</p>
-                        <p>Location: {ticket.location || "N/A"}</p>
-                        <p>Contact: {ticket.contactNumber || "N/A"}</p>
+                        <p>Resource: {ticket.relatedResource || "N/A"}</p>
+                        <p>Location: {ticket.relatedLocation || "N/A"}</p>
+                        <p>Contact: {ticket.preferredContactDetails || "N/A"}</p>
                         <p>Assigned To: {ticket.assignedTo || "Not assigned"}</p>
-                        <p className="md:col-span-2">
-                          Comments: {ticket.comments || "No comments yet"}
-                        </p>
+                        <p>Created At: {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : "N/A"}</p>
                         <p className="md:col-span-2">
                           Resolution Note: {ticket.resolutionNote || "No note yet"}
                         </p>
+                        <p className="md:col-span-2">
+                          Rejection Reason: {ticket.rejectionReason || "N/A"}
+                        </p>
                         <div className="md:col-span-2">
                           <p className="font-medium text-stone-700">Photos:</p>
-                          {attachmentsByTicket[ticket.id]?.length ? (
+                          {ticket.attachments?.length ? (
                             <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                              {attachmentsByTicket[ticket.id].map((attachment) => (
+                              {ticket.attachments.map((attachment) => (
                                 <div
                                   key={attachment.id}
                                   className="overflow-hidden rounded-xl border border-stone-200 bg-white"
@@ -393,9 +626,12 @@ export default function TicketPage() {
                                   <img
                                     alt={attachment.fileName}
                                     className="h-28 w-full bg-stone-100 object-cover"
-                                    src={`${API_BASE_URL}/attachments/file/${attachment.id}`}
+                                    src={`${API_BASE_URL}/tickets/attachments/${attachment.id}/file`}
                                   />
-                                  <p className="truncate px-2 py-1 text-xs text-stone-600" title={attachment.fileName}>
+                                  <p
+                                    className="truncate px-2 py-1 text-xs text-stone-600"
+                                    title={attachment.fileName}
+                                  >
                                     {attachment.fileName}
                                   </p>
                                 </div>
@@ -405,44 +641,258 @@ export default function TicketPage() {
                             <p>No photos uploaded</p>
                           )}
                         </div>
+
+                        <div className="md:col-span-2 rounded-2xl border border-stone-200 bg-white p-3">
+                          <p className="font-medium text-stone-700">Progress Updates</p>
+                          {ticket.progressUpdates?.length ? (
+                            <ul className="mt-2 space-y-2 text-xs">
+                              {ticket.progressUpdates.map((update) => (
+                                <li key={update.id} className="rounded-xl bg-stone-50 p-2">
+                                  <p className="font-semibold text-stone-800">{update.updateText}</p>
+                                  <p className="text-stone-500">
+                                    {update.updatedBy} ({update.updatedByRole}) at{" "}
+                                    {new Date(update.createdAt).toLocaleString()}
+                                  </p>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-2 text-xs text-stone-500">No progress updates yet.</p>
+                          )}
+
+                          {canManageTicket(ticket) ? (
+                            <div className="mt-3 flex gap-2">
+                              <input
+                                value={progressDraftByTicket[ticket.id] || ""}
+                                onChange={(event) =>
+                                  setProgressDraftByTicket((current) => ({
+                                    ...current,
+                                    [ticket.id]: event.target.value,
+                                  }))
+                                }
+                                placeholder="Add a technician progress update"
+                                className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void addProgressUpdate(ticket.id)}
+                                className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="md:col-span-2 rounded-2xl border border-stone-200 bg-white p-3">
+                          <p className="font-medium text-stone-700">Comments</p>
+                          {ticket.comments?.length ? (
+                            <ul className="mt-2 space-y-2 text-xs">
+                              {ticket.comments.map((comment) => (
+                                <li key={comment.id} className="rounded-xl bg-stone-50 p-2">
+                                  {editingCommentId === comment.id ? (
+                                    <div className="space-y-2">
+                                      <textarea
+                                        value={editingCommentText}
+                                        onChange={(event) => setEditingCommentText(event.target.value)}
+                                        className="w-full rounded-lg border border-stone-200 px-2 py-1 text-xs"
+                                        rows={3}
+                                      />
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => void saveEditedComment(comment.id)}
+                                          className="rounded-full bg-slate-900 px-3 py-1 text-white"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingCommentId(null);
+                                            setEditingCommentText("");
+                                          }}
+                                          className="rounded-full border border-stone-300 px-3 py-1"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <p className="font-semibold text-stone-800">{comment.commentText}</p>
+                                      <p className="text-stone-500">
+                                        {comment.owner} ({comment.ownerRole}) at{" "}
+                                        {new Date(comment.createdAt).toLocaleString()}
+                                      </p>
+                                      {canManageComment(comment) ? (
+                                        <div className="mt-1 flex gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditingCommentId(comment.id);
+                                              setEditingCommentText(comment.commentText);
+                                            }}
+                                            className="rounded-full border border-stone-300 px-3 py-1"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => void deleteComment(comment.id)}
+                                            className="rounded-full border border-rose-300 px-3 py-1 text-rose-700"
+                                          >
+                                            Delete
+                                          </button>
+                                        </div>
+                                      ) : null}
+                                    </>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-2 text-xs text-stone-500">No comments yet.</p>
+                          )}
+
+                          <div className="mt-3 flex gap-2">
+                            <input
+                              value={commentDraftByTicket[ticket.id] || ""}
+                              onChange={(event) =>
+                                setCommentDraftByTicket((current) => ({
+                                  ...current,
+                                  [ticket.id]: event.target.value,
+                                }))
+                              }
+                              placeholder="Add a comment"
+                              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void addComment(ticket.id)}
+                              className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                            >
+                              Post
+                            </button>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="mt-5 flex flex-wrap gap-3">
-                        <button
-                          className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
-                          onClick={() => void updateTicketStatus(ticket.id, "IN_PROGRESS")}
-                          type="button"
-                        >
-                          Mark In Progress
-                        </button>
-                        <button
-                          className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
-                          onClick={() => void updateTicketStatus(ticket.id, "RESOLVED")}
-                          type="button"
-                        >
-                          Mark Resolved
-                        </button>
-                        <button
-                          className="rounded-full bg-emerald-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
-                          onClick={() => void assignTech(ticket.id)}
-                          type="button"
-                        >
-                          Assign Tech
-                        </button>
-                        <button
-                          className="rounded-full bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-400"
-                          onClick={() => void addResolutionNote(ticket.id)}
-                          type="button"
-                        >
-                          Add Note
-                        </button>
-                        <button
-                          className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
-                          onClick={() => void deleteTicket(ticket.id)}
-                          type="button"
-                        >
-                          Delete
-                        </button>
+                        {canManageTicket(ticket) && ticket.status === "OPEN" ? (
+                          <button
+                            className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+                            onClick={() => void updateTicketStatus(ticket.id, "IN_PROGRESS")}
+                            type="button"
+                          >
+                            Start Progress
+                          </button>
+                        ) : null}
+
+                        {canManageTicket(ticket) && ticket.status === "IN_PROGRESS" ? (
+                          <button
+                            className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
+                            onClick={() => void updateTicketStatus(ticket.id, "RESOLVED")}
+                            type="button"
+                          >
+                            Mark Resolved
+                          </button>
+                        ) : null}
+
+                        {actorRole === "ADMIN" && ticket.status === "RESOLVED" ? (
+                          <button
+                            className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+                            onClick={() => void updateTicketStatus(ticket.id, "CLOSED")}
+                            type="button"
+                          >
+                            Close Ticket
+                          </button>
+                        ) : null}
+
+                        {actorRole === "ADMIN" ? (
+                          <div className="flex flex-wrap items-center gap-2 rounded-full border border-stone-200 px-2 py-1">
+                            <select
+                              value={assignmentByTicket[ticket.id] || ""}
+                              onChange={(event) =>
+                                setAssignmentByTicket((current) => ({
+                                  ...current,
+                                  [ticket.id]: event.target.value,
+                                }))
+                              }
+                              className="rounded-full border border-stone-200 px-3 py-1 text-xs"
+                            >
+                              <option value="">Select technician</option>
+                              {technicians.map((technician) => (
+                                <option key={technician.id} value={technician.email}>
+                                  {technician.fullName} ({technician.email})
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              className="rounded-full bg-emerald-800 px-4 py-2 text-xs font-medium text-white transition hover:bg-emerald-700"
+                              onClick={() => void assignTech(ticket.id)}
+                              type="button"
+                            >
+                              Assign
+                            </button>
+                          </div>
+                        ) : null}
+
+                        {canManageTicket(ticket) ? (
+                          <div className="flex w-full items-center gap-2">
+                            <input
+                              value={resolutionDraftByTicket[ticket.id] || ""}
+                              onChange={(event) =>
+                                setResolutionDraftByTicket((current) => ({
+                                  ...current,
+                                  [ticket.id]: event.target.value,
+                                }))
+                              }
+                              placeholder="Resolution notes"
+                              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs"
+                            />
+                            <button
+                              className="rounded-full bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-400"
+                              onClick={() => void addResolutionNote(ticket.id)}
+                              type="button"
+                            >
+                              Save Note
+                            </button>
+                          </div>
+                        ) : null}
+
+                        {actorRole === "ADMIN" && (ticket.status === "OPEN" || ticket.status === "IN_PROGRESS") ? (
+                          <div className="flex w-full items-center gap-2">
+                            <input
+                              value={rejectionReasonByTicket[ticket.id] || ""}
+                              onChange={(event) =>
+                                setRejectionReasonByTicket((current) => ({
+                                  ...current,
+                                  [ticket.id]: event.target.value,
+                                }))
+                              }
+                              placeholder="Rejection reason"
+                              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs"
+                            />
+                            <button
+                              className="rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-600"
+                              onClick={() => void rejectTicket(ticket.id)}
+                              type="button"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : null}
+
+                        {(actorRole === "ADMIN" || (ticket.createdBy === actorEmail && ticket.status === "OPEN")) ? (
+                          <button
+                            className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
+                            onClick={() => void deleteTicket(ticket.id)}
+                            type="button"
+                          >
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                     </article>
                   ))
