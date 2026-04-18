@@ -10,7 +10,7 @@ const updates = [
   {
     title: "Resource approval updates",
     body: "A dedicated feed can surface booking approvals, denials, and room changes in one place.",
-    tone: "bg-green-100 text-green-800",
+    tone: "bg-orange-100 text-orange-800",
   },
   {
     title: "Maintenance ticket movement",
@@ -20,7 +20,7 @@ const updates = [
   {
     title: "System and campus reminders",
     body: "Announcements about availability windows or service outages fit naturally into this layout.",
-    tone: "bg-green-50 text-green-800",
+    tone: "bg-orange-50 text-orange-800",
   },
 ];
 
@@ -35,11 +35,11 @@ export default function NotificationsPage() {
           aside={
             <div className="grid gap-4">
               <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Status Feed</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Status Feed</p>
                 <p className="mt-3 text-3xl font-semibold">Centralized</p>
               </div>
               <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Designed For</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Designed For</p>
                 <p className="mt-3 text-lg font-semibold">Approvals, reminders, and issue progress</p>
               </div>
             </div>

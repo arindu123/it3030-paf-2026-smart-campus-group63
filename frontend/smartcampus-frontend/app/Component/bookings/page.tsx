@@ -60,13 +60,13 @@ export default function BookingsPage() {
     <div>
       <Nav />
       <main
-        className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_40%),linear-gradient(180deg,_#eef6ff_0%,_#ddeefe_48%,_#c8dff7_100%)] px-4 py-8 text-stone-900 sm:px-6 lg:px-8"
+        className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_40%),linear-gradient(180deg,_#eef6ff_0%,_#ddeefe_48%,_#c8dff7_100%)] px-4 pb-8 pt-28 text-stone-900 sm:px-6 lg:px-8"
         suppressHydrationWarning
       >
         <div className="mx-auto max-w-7xl">
           <DashboardHero
             description="View and manage all your resource bookings. Track pending requests and upcoming reservations."
-            eyebrow="Smart Campus Booking Desk"
+            eyebrow="UniDesk Booking Desk"
             error={error}
             message={message}
             onRefresh={() => void loadBookings()}

@@ -150,7 +150,7 @@ export default function TicketPage() {
       <div className="mx-auto max-w-7xl">
           <DashboardHero
             description="This ticket desk is wired to your Spring Boot backend on port 8089 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
-            eyebrow="Smart Campus Ticket Desk"
+            eyebrow="UniDesk Ticket Desk"
             error={error}
             message={message}
             onRefresh={() => void loadTickets()}
@@ -244,7 +244,7 @@ export default function TicketPage() {
                             {ticket.description}
                           </p>
                         </div>
-                        <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">
+                        <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
                           {ticket.status}
                         </span>
                       </div>
@@ -268,14 +268,14 @@ export default function TicketPage() {
                           Mark In Progress
                         </button>
                         <button
-                          className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
+                          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-500"
                           onClick={() => void updateTicketStatus(ticket.id, "RESOLVED")}
                           type="button"
                         >
                           Mark Resolved
                         </button>
                         <button
-                          className="rounded-full bg-emerald-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+                          className="rounded-full bg-blue-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-800"
                           onClick={() => void assignTech(ticket.id)}
                           type="button"
                         >

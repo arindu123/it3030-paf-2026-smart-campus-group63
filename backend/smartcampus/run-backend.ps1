@@ -1,14 +1,12 @@
 param(
-<<<<<<< Updated upstream
-    [int]$Port = 8089
-=======
     [int]$Port = 8089,
     [ValidateSet("local", "shared")]
     [string]$Profile = "shared",
     [string]$DbUrl = "jdbc:mysql://localhost:3306/smartcampusdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Colombo",
     [string]$DbUsername = "smartcampus_user",
-    [string]$DbPassword = "StrongPass123!"
->>>>>>> Stashed changes
+    [string]$DbPassword = "StrongPass123!",
+    [string]$GoogleClientId = $env:GOOGLE_CLIENT_ID,
+    [string]$GoogleClientSecret = $env:GOOGLE_CLIENT_SECRET
 )
 
 $existingConnection = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
@@ -21,14 +19,19 @@ if ($existingConnection) {
     Start-Sleep -Seconds 1
 }
 
-<<<<<<< Updated upstream
-Write-Host "Starting Smart Campus backend on port $Port..."
-=======
 Write-Host "Starting Smart Campus backend on port $Port using profile '$Profile'..."
 $env:SERVER_PORT = "$Port"
 $env:SPRING_PROFILES_ACTIVE = $Profile
 $env:DB_URL = $DbUrl
 $env:DB_USERNAME = $DbUsername
 $env:DB_PASSWORD = $DbPassword
->>>>>>> Stashed changes
+
+if ($GoogleClientId) {
+    $env:GOOGLE_CLIENT_ID = $GoogleClientId
+}
+
+if ($GoogleClientSecret) {
+    $env:GOOGLE_CLIENT_SECRET = $GoogleClientSecret
+}
+
 & ".\mvnw.cmd" spring-boot:run

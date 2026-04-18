@@ -121,10 +121,10 @@ export default function LoginPage() {
   return (
     <SiteFrame accent="sky">
       <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-        <GlassPanel className="bg-[linear-gradient(160deg,rgba(12,40,26,0.96),rgba(26,103,61,0.92))] text-slate-50">
+        <GlassPanel className="bg-[linear-gradient(160deg,rgba(10,43,107,0.98),rgba(14,58,130,0.94))] text-slate-50">
           <Eyebrow>Welcome Back</Eyebrow>
           <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
-            Sign in to your Smart Campus workspace.
+            Sign in to your UniDesk workspace.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-8 text-slate-200">
             Access operational dashboards, resource tools, and ticket management with a cleaner,
@@ -133,11 +133,11 @@ export default function LoginPage() {
 
           <div className="mt-10 grid gap-4">
             <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
-              <p className="text-xs uppercase tracking-[0.28em] text-green-200">Accounts</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Accounts</p>
               <p className="mt-3 text-lg font-semibold">Students, admins, and technicians</p>
             </div>
             <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
-              <p className="text-xs uppercase tracking-[0.28em] text-green-200">Access Flow</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Access Flow</p>
               <p className="mt-3 text-lg font-semibold">Email login or Google sign-in from one screen</p>
             </div>
           </div>
@@ -160,7 +160,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -172,7 +172,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -186,7 +186,7 @@ export default function LoginPage() {
                 />
                 Remember me
               </label>
-              <Link href="/Component/Register" className="font-semibold text-amber-700 hover:text-amber-900">
+              <Link href="/Component/Register" className="font-semibold text-orange-600 hover:text-orange-800">
                 Need an account?
               </Link>
             </div>
@@ -194,7 +194,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 font-semibold text-white shadow-lg shadow-amber-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-[linear-gradient(135deg,#EE9B13,#D78A0F)] px-5 py-3 font-semibold text-white shadow-lg shadow-orange-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? "Signing in..." : "Login"}
             </button>
@@ -208,7 +208,7 @@ export default function LoginPage() {
           </a>
 
           {message ? (
-            <p className={`mt-4 text-sm ${isError ? "text-red-600" : "text-amber-700"}`}>{message}</p>
+            <p className={`mt-4 text-sm ${isError ? "text-red-600" : "text-orange-600"}`}>{message}</p>
           ) : null}
         </GlassPanel>
       </div>

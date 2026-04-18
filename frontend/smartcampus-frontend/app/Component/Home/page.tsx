@@ -14,25 +14,25 @@ const quickActions = [
     title: "Resource Directory",
     description: "Browse labs, rooms, and equipment with live availability details.",
     href: "/Component/resources",
-    tone: "from-green-100 to-white",
+    tone: "from-orange-100 to-white",
   },
   {
     title: "Bookings Planner",
     description: "Coordinate lectures, events, and shared space access from one place.",
     href: "/Component/bookings",
-    tone: "from-green-50 to-white",
+    tone: "from-orange-50 to-white",
   },
   {
     title: "Support Tickets",
     description: "Report maintenance issues and track every update until resolution.",
     href: "/Component/Ticket",
-    tone: "from-lime-100 to-white",
+    tone: "from-yellow-100 to-white",
   },
   {
     title: "Notifications",
     description: "Stay on top of campus service changes, approvals, and reminders.",
     href: "/Component/notifications",
-    tone: "from-emerald-100 to-white",
+    tone: "from-amber-100 to-white",
   },
 ];
 
@@ -56,17 +56,17 @@ const workflow = [
 
 export default function HomePage() {
   return (
-    <SiteFrame accent="amber">
+    <SiteFrame accent="orange">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
         <PageHero
           eyebrow="Campus Control"
           title="Run campus resources, requests, and support from one polished hub."
-          description="Smart Campus brings together resource discovery, booking coordination, maintenance tickets, and role-based dashboards in a cleaner operational experience."
+          description="UniDesk brings together resource discovery, booking coordination, support tickets, and role-based dashboards in a unified operational experience."
           actions={
             <>
               <Link
                 href="/Component/resources"
-                className="rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-amber-900/20 transition hover:brightness-105"
+                className="rounded-full bg-[linear-gradient(135deg,#EE9B13,#D78A0F)] px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-orange-900/20 transition hover:brightness-105"
               >
                 Explore Resources
               </Link>
@@ -81,7 +81,7 @@ export default function HomePage() {
           aside={
             <div className="flex h-full flex-col justify-between gap-6">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-green-200">Operations Pulse</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-orange-600">Operations Pulse</p>
                 <h3 className="mt-4 max-w-sm text-3xl font-semibold tracking-[-0.04em]">
                   Designed for admins, technicians, staff, and students.
                 </h3>
@@ -89,17 +89,17 @@ export default function HomePage() {
 
               <div className="grid gap-4">
                 <div className="float-gentle rounded-[1.5rem] border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.28em] text-green-200">Services</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Services</p>
                   <p className="mt-3 text-4xl font-semibold">4</p>
                   <p className="mt-2 text-sm text-slate-200">Resource access, bookings, tickets, and updates.</p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                    <p className="text-xs uppercase tracking-[0.28em] text-green-200">Availability</p>
+                    <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Availability</p>
                     <p className="mt-3 text-2xl font-semibold">Live</p>
                   </div>
                   <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                    <p className="text-xs uppercase tracking-[0.28em] text-green-200">Support</p>
+                    <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Support</p>
                     <p className="mt-3 text-2xl font-semibold">Tracked</p>
                   </div>
                 </div>
@@ -187,7 +187,7 @@ export default function HomePage() {
           </GlassPanel>
 
           <GlassPanel className="bg-[linear-gradient(165deg,rgba(15,23,42,0.95),rgba(34,74,128,0.92))] text-slate-50">
-            <p className="text-xs uppercase tracking-[0.32em] text-green-200">Why This Design</p>
+            <p className="text-xs uppercase tracking-[0.32em] text-orange-600">Why This Design</p>
             <h3 className="mt-4 text-3xl font-semibold tracking-[-0.04em]">
               More intentional, less generic.
             </h3>
@@ -198,11 +198,11 @@ export default function HomePage() {
 
             <div className="mt-8 grid gap-4">
               <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Visual System</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Visual System</p>
                 <p className="mt-3 text-lg font-semibold">Layered glass panels, sharper hierarchy, and richer gradients.</p>
               </div>
               <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Usability</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Usability</p>
                 <p className="mt-3 text-lg font-semibold">Cleaner nav, clearer page heroes, and better-scanning content blocks.</p>
               </div>
             </div>
