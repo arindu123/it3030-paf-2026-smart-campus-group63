@@ -20,3 +20,12 @@ $env:DB_PASSWORD="ChangeThisPassword"
 cd backend/smartcampus
 .\run-backend.ps1
 ```
+
+## 4) One-time upgrade for existing databases
+If your `users.provider` column was created before GitHub login support, run this once:
+
+```sql
+USE smartcampusdb;
+ALTER TABLE users
+	MODIFY COLUMN provider ENUM('LOCAL','GOOGLE','GITHUB') NULL;
+```

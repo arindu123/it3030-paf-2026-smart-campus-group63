@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { API_BASE_URL, GOOGLE_AUTH_URL } from "../shared/campusApi";
+import { API_BASE_URL, GITHUB_AUTH_URL, GOOGLE_AUTH_URL } from "../shared/campusApi";
 import { Eyebrow, GlassPanel, SiteFrame } from "../shared/SiteFrame";
 
 type LoginResult = {
@@ -72,7 +72,7 @@ function LoginPageContent() {
 
     if (oauthStatus === "error") {
       setIsError(true);
-      setMessage(searchParams.get("message") || "Google login failed");
+      setMessage(searchParams.get("message") || "OAuth login failed");
     }
   }, [router, searchParams]);
 
@@ -138,7 +138,7 @@ function LoginPageContent() {
             </div>
             <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
               <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Access Flow</p>
-              <p className="mt-3 text-lg font-semibold">Email login or Google sign-in from one screen</p>
+              <p className="mt-3 text-lg font-semibold">Email login, Google, or GitHub from one screen</p>
             </div>
           </div>
         </GlassPanel>
@@ -223,6 +223,16 @@ function LoginPageContent() {
               />
             </svg>
             <span>Continue with Google</span>
+          </a>
+
+          <a
+            href={GITHUB_AUTH_URL}
+            className="mt-3 flex items-center justify-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3 text-center font-semibold text-stone-700 transition hover:bg-stone-50"
+          >
+            <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="#181717">
+              <path d="M12 .5C5.73.5.75 5.56.75 11.82c0 5.02 3.24 9.29 7.73 10.8.57.11.78-.25.78-.55 0-.27-.01-.98-.02-1.92-3.14.69-3.8-1.52-3.8-1.52-.51-1.33-1.24-1.68-1.24-1.68-1.02-.7.08-.69.08-.69 1.13.08 1.73 1.18 1.73 1.18 1 .1 1.58.79 1.58.79.99 1.73 2.59 1.23 3.22.94.1-.74.39-1.23.71-1.51-2.5-.29-5.12-1.28-5.12-5.71 0-1.26.44-2.29 1.17-3.1-.12-.29-.51-1.46.11-3.04 0 0 .95-.31 3.12 1.18a10.7 10.7 0 0 1 5.68 0c2.17-1.49 3.12-1.18 3.12-1.18.62 1.58.23 2.75.11 3.04.73.81 1.17 1.84 1.17 3.1 0 4.44-2.63 5.42-5.14 5.7.4.35.75 1.03.75 2.08 0 1.5-.01 2.72-.01 3.09 0 .3.2.67.79.55 4.48-1.51 7.71-5.78 7.71-10.79C23.25 5.56 18.27.5 12 .5z" />
+            </svg>
+            <span>Continue with GitHub</span>
           </a>
 
           {message ? (

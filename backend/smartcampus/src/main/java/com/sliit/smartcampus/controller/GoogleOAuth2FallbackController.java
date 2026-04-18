@@ -25,4 +25,14 @@ public class GoogleOAuth2FallbackController {
                     StandardCharsets.UTF_8
                 );
     }
+
+    @GetMapping("/oauth2/authorization/github")
+    public String handleUnavailableGithubAuthorization() {
+        return "redirect:" + frontendLoginUrl
+                + "?oauth=error&message="
+                + URLEncoder.encode(
+                    "GitHub sign-in is not configured on the backend. Set the GitHub OAuth environment variables and restart the server.",
+                    StandardCharsets.UTF_8
+                );
+    }
 }

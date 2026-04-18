@@ -1,6 +1,7 @@
 export const BACKEND_BASE_URL = "http://localhost:8089";
 export const API_BASE_URL = `${BACKEND_BASE_URL}/api`;
 export const GOOGLE_AUTH_URL = `${BACKEND_BASE_URL}/oauth2/authorization/google`;
+export const GITHUB_AUTH_URL = `${BACKEND_BASE_URL}/oauth2/safe/github`;
 export const ACTOR_EMAIL_HEADER = "X-User-Email";
 
 export const ticketPriorities = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
