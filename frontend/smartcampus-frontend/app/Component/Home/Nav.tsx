@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../shared/campusApi";
@@ -112,20 +113,15 @@ export default function Nav() {
     <header className="fixed inset-x-0 top-0 z-50">
       <nav className="flex w-full flex-col gap-4 border-b border-white/60 bg-white/90 px-5 py-4 shadow-[0_18px_50px_rgba(42,31,17,0.12)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="group">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#EE9B13,#0A2B6B)] text-lg font-semibold text-white shadow-lg shadow-orange-900/25">
-                U
-              </span>
-              <div>
-                <p className="text-lg font-semibold tracking-[-0.03em] text-stone-950">
-                  UniDesk
-                </p>
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">
-                  Operations Suite
-                </p>
-              </div>
-            </div>
+          <Link href="/" className="group ml-30">
+            <Image
+              src="/uni desk logo.png"
+              alt="UniDesk logo"
+              width={450}
+              height={101}
+              className="h-12 w-auto object-contain"
+              priority
+            />
           </Link>
 
           {user ? (

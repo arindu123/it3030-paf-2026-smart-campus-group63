@@ -90,9 +90,27 @@ export default function RegisterFormPage() {
 
           <a
             href={GOOGLE_AUTH_URL}
-            className="mt-6 block rounded-full border border-stone-200 bg-white px-5 py-3 text-center font-semibold text-stone-700 transition hover:bg-stone-50"
+            className="mt-6 flex items-center justify-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3 text-center font-semibold text-stone-700 transition hover:bg-stone-50"
           >
-            Continue with Google
+            <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M23.49 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h6.45a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.56-5.16 3.56-8.65z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.07 7.93-2.91l-3.88-3c-1.08.72-2.46 1.15-4.05 1.15-3.11 0-5.75-2.1-6.7-4.93H1.29v3.1A12 12 0 0 0 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.3 14.31A7.2 7.2 0 0 1 4.93 12c0-.8.14-1.57.37-2.31v-3.1H1.29A12 12 0 0 0 0 12c0 1.93.46 3.76 1.29 5.41l4.01-3.1z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.77c1.76 0 3.33.61 4.57 1.8l3.42-3.42C17.95 1.28 15.24 0 12 0A12 12 0 0 0 1.29 6.59l4.01 3.1c.95-2.83 3.59-4.92 6.7-4.92z"
+              />
+            </svg>
+            <span>Continue with Google</span>
           </a>
 
           <form className="mt-8 grid gap-5 md:grid-cols-2" onSubmit={handleSubmit}>
