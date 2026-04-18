@@ -54,6 +54,36 @@ export type TicketNotification = {
   createdAt: string;
 };
 
+export const campusNotificationTypes = [
+  "BOOKING_REQUEST_SUBMITTED",
+  "BOOKING_APPROVED",
+  "BOOKING_REJECTED",
+  "BOOKING_CANCELLED",
+  "TICKET_CREATED",
+  "TICKET_ASSIGNED",
+  "TICKET_STATUS_CHANGED",
+  "TICKET_COMMENT_ADDED",
+  "TICKET_RESOLUTION_NOTE_ADDED",
+  "TICKET_PROGRESS_UPDATED",
+  "TECHNICIAN_UPDATE",
+  "DEADLINE_REMINDER",
+] as const;
+
+export type CampusNotificationType = (typeof campusNotificationTypes)[number];
+
+export type CampusNotification = {
+  id: number;
+  title: string;
+  message: string;
+  type: CampusNotificationType;
+  relatedType: string;
+  relatedId?: number | null;
+  recipientEmail: string;
+  recipientRole: UserRole;
+  read: boolean;
+  createdAt: string;
+};
+
 export type Ticket = {
   id: number;
   title: string;
@@ -106,6 +136,9 @@ export type Booking = {
   expectedAttendees: number;
   status: string;
   resourceName?: string;
+  createdBy?: string;
+  rejectionReason?: string;
+  createdAt?: string;
 };
 
 export type AdminUser = {

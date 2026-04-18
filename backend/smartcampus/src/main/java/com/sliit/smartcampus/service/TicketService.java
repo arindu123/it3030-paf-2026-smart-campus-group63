@@ -14,6 +14,7 @@ import com.sliit.smartcampus.entity.Ticket;
 import com.sliit.smartcampus.entity.TicketComment;
 import com.sliit.smartcampus.entity.TicketProgressUpdate;
 import com.sliit.smartcampus.entity.User;
+import com.sliit.smartcampus.enums.CampusNotificationType;
 import com.sliit.smartcampus.enums.TicketStatus;
 import com.sliit.smartcampus.enums.UserRole;
 import com.sliit.smartcampus.exception.BadRequestException;
@@ -41,7 +42,7 @@ public class TicketService {
     private final TicketCommentRepository ticketCommentRepository;
     private final TicketProgressUpdateRepository ticketProgressUpdateRepository;
     private final TicketAuthorizationService ticketAuthorizationService;
-    private final TicketNotificationService ticketNotificationService;
+    private final CampusNotificationService campusNotificationService;
 
     public TicketService(TicketRepository ticketRepository,
                          ResourceRepository resourceRepository,
@@ -50,7 +51,7 @@ public class TicketService {
                          TicketCommentRepository ticketCommentRepository,
                          TicketProgressUpdateRepository ticketProgressUpdateRepository,
                          TicketAuthorizationService ticketAuthorizationService,
-                         TicketNotificationService ticketNotificationService) {
+                         CampusNotificationService campusNotificationService) {
         this.ticketRepository = ticketRepository;
         this.resourceRepository = resourceRepository;
         this.userRepository = userRepository;
@@ -58,7 +59,7 @@ public class TicketService {
         this.ticketCommentRepository = ticketCommentRepository;
         this.ticketProgressUpdateRepository = ticketProgressUpdateRepository;
         this.ticketAuthorizationService = ticketAuthorizationService;
-        this.ticketNotificationService = ticketNotificationService;
+        this.campusNotificationService = campusNotificationService;
     }
 
     public TicketResponse createTicket(TicketCreateRequest request, String actorEmail) {
@@ -103,6 +104,24 @@ public class TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
+        campusNotificationService.notifyEmail(
+            saved.getCreatedBy(),
+            saved.getCreatedByUser() != null ? saved.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.TICKET_CREATED,
+            "Ticket created",
+            "Your ticket #" + saved.getId() + " has been created and is now open.",
+            "TICKET",
+            saved.getId()
+        );
+        campusNotificationService.notifyRole(
+            UserRole.ADMIN,
+            actor.getEmail(),
+            CampusNotificationType.TICKET_CREATED,
+            "New ticket created",
+            "A new ticket #" + saved.getId() + " was created by " + actor.getEmail() + ".",
+            "TICKET",
+            saved.getId()
+        );
         return toTicketResponse(saved);
     }
 
@@ -118,7 +137,7 @@ public class TicketService {
 
         return tickets.stream()
             .map(this::toTicketResponse)
-            .toList();
+            .collect(Collectors.toList());
     }
 
     public TicketResponse getTicketById(Long id, String actorEmail) {
@@ -141,9 +160,7 @@ public class TicketService {
 
         TicketStatus currentStatus = ticket.getStatus();
         if (!TicketWorkflowRules.canTransition(currentStatus, nextStatus)) {
-            throw new BadRequestException(
-                "Invalid status transition from " + currentStatus + " to " + nextStatus
-            );
+            throw new BadRequestException("Invalid status transition from " + currentStatus + " to " + nextStatus);
         }
 
         ticket.setStatus(nextStatus);
@@ -152,7 +169,24 @@ public class TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
-        ticketNotificationService.notifyTicketOwnerForStatusChange(saved, actor.getEmail(), currentStatus, nextStatus);
+        campusNotificationService.notifyEmail(
+            saved.getCreatedBy(),
+            saved.getCreatedByUser() != null ? saved.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.TICKET_STATUS_CHANGED,
+            "Ticket status updated",
+            "Ticket #" + saved.getId() + " changed from " + currentStatus + " to " + nextStatus + ".",
+            "TICKET",
+            saved.getId()
+        );
+        campusNotificationService.notifyRole(
+            UserRole.ADMIN,
+            actor.getEmail(),
+            CampusNotificationType.TICKET_STATUS_CHANGED,
+            "Ticket status updated",
+            "Ticket #" + saved.getId() + " changed from " + currentStatus + " to " + nextStatus + ".",
+            "TICKET",
+            saved.getId()
+        );
         return toTicketResponse(saved);
     }
 
@@ -166,15 +200,21 @@ public class TicketService {
         TicketStatus currentStatus = ticket.getStatus();
 
         if (!TicketWorkflowRules.canTransition(currentStatus, TicketStatus.REJECTED)) {
-            throw new BadRequestException(
-                "Ticket in " + currentStatus + " cannot be rejected"
-            );
+            throw new BadRequestException("Ticket in " + currentStatus + " cannot be rejected");
         }
 
         ticket.setStatus(TicketStatus.REJECTED);
         ticket.setRejectionReason(request.getReason().trim());
         Ticket saved = ticketRepository.save(ticket);
-        ticketNotificationService.notifyTicketOwnerForStatusChange(saved, actor.getEmail(), currentStatus, TicketStatus.REJECTED);
+        campusNotificationService.notifyEmail(
+            saved.getCreatedBy(),
+            saved.getCreatedByUser() != null ? saved.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.TICKET_STATUS_CHANGED,
+            "Ticket rejected",
+            "Ticket #" + saved.getId() + " was rejected by " + actor.getEmail() + ".",
+            "TICKET",
+            saved.getId()
+        );
         return toTicketResponse(saved);
     }
 
@@ -191,7 +231,17 @@ public class TicketService {
         }
 
         ticket.setResolutionNote(request.getResolutionNote().trim());
-        return toTicketResponse(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
+        campusNotificationService.notifyEmail(
+            saved.getCreatedBy(),
+            saved.getCreatedByUser() != null ? saved.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.TICKET_RESOLUTION_NOTE_ADDED,
+            "Resolution note added",
+            "A resolution note was added to ticket #" + saved.getId() + ".",
+            "TICKET",
+            saved.getId()
+        );
+        return toTicketResponse(saved);
     }
 
     public TicketResponse assignTechnician(Long id,
@@ -211,7 +261,17 @@ public class TicketService {
 
         ticket.setAssignedToUser(technician);
         ticket.setAssignedTo(technician.getEmail());
-        return toTicketResponse(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
+        campusNotificationService.notifyEmail(
+            technician.getEmail(),
+            technician.getRole(),
+            CampusNotificationType.TICKET_ASSIGNED,
+            "New ticket assigned",
+            "Ticket #" + saved.getId() + " was assigned to you.",
+            "TICKET",
+            saved.getId()
+        );
+        return toTicketResponse(saved);
     }
 
     public TicketProgressUpdateResponse addProgressUpdate(Long ticketId,
@@ -229,6 +289,15 @@ public class TicketService {
         progressUpdate.setUpdatedByUser(actor);
 
         TicketProgressUpdate saved = ticketProgressUpdateRepository.save(progressUpdate);
+        campusNotificationService.notifyEmail(
+            ticket.getCreatedBy(),
+            ticket.getCreatedByUser() != null ? ticket.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.TICKET_PROGRESS_UPDATED,
+            "Ticket progress updated",
+            "Ticket #" + ticket.getId() + " received a new progress update.",
+            "TICKET",
+            ticket.getId()
+        );
         return toProgressResponse(saved);
     }
 
@@ -240,7 +309,7 @@ public class TicketService {
         return ticketProgressUpdateRepository.findByTicketIdOrderByCreatedAtAsc(ticketId)
             .stream()
             .map(this::toProgressResponse)
-            .toList();
+            .collect(Collectors.toList());
     }
 
     public void deleteTicket(Long id, String actorEmail) {
@@ -321,21 +390,21 @@ public class TicketService {
                     attachmentResponse.setDownloadUrl("/api/tickets/attachments/" + attachment.getId() + "/file");
                     return attachmentResponse;
                 })
-                .toList()
+                .collect(Collectors.toList())
         );
 
         response.setComments(
             ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(ticket.getId())
                 .stream()
                 .map(this::toCommentResponse)
-                .toList()
+                .collect(Collectors.toList())
         );
 
         response.setProgressUpdates(
             ticketProgressUpdateRepository.findByTicketIdOrderByCreatedAtAsc(ticket.getId())
                 .stream()
                 .map(this::toProgressResponse)
-                .toList()
+                .collect(Collectors.toList())
         );
 
         return response;

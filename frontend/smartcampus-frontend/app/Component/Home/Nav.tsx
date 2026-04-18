@@ -3,21 +3,24 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../shared/campusApi";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  API_BASE_URL,
+  CampusNotification,
+  fetchJson,
+  getStoredUser,
+  StoredUser as SharedStoredUser,
+  withActorHeaders,
+} from "../shared/campusApi";
 
-type StoredUser = {
-  email: string;
-  fullName?: string;
-  role?: "USER" | "ADMIN" | "TECHNICIAN";
-};
+function getDashboardByRole(role?: string | null) {
+  const normalizedRole = role?.toUpperCase();
 
-function getDashboardByRole(role?: "USER" | "ADMIN" | "TECHNICIAN") {
-  if (role === "ADMIN") {
+  if (normalizedRole === "ADMIN") {
     return "/Component/dashboard/admin";
   }
 
-  if (role === "TECHNICIAN") {
+  if (normalizedRole === "TECHNICIAN") {
     return "/Component/dashboard/technician";
   }
 
@@ -27,25 +30,54 @@ function getDashboardByRole(role?: "USER" | "ADMIN" | "TECHNICIAN") {
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<StoredUser | null>(null);
+  const [user, setUser] = useState<SharedStoredUser | null>(null);
+  const [notifications, setNotifications] = useState<CampusNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  const loadNotificationSummary = useCallback(async () => {
+    if (!getStoredUser()?.email) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    try {
+      const [notificationData, unreadData] = await Promise.all([
+        fetchJson<CampusNotification[]>(`${API_BASE_URL}/notifications`, withActorHeaders()),
+        fetchJson<{ count: number }>(`${API_BASE_URL}/notifications/unread-count`, withActorHeaders()),
+      ]);
+
+      setNotifications(notificationData.slice(0, 5));
+      setUnreadCount(unreadData.count);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, []);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      const raw = window.localStorage.getItem("smartcampusUser");
-
-      if (!raw) {
-        return;
-      }
-
-      try {
-        setUser(JSON.parse(raw) as StoredUser);
-      } catch {
-        window.localStorage.removeItem("smartcampusUser");
-      }
+      setUser(getStoredUser());
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
   }, []);
+
+  useEffect(() => {
+    if (!user?.email) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    void loadNotificationSummary();
+    const intervalId = window.setInterval(() => {
+      void loadNotificationSummary();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadNotificationSummary, user?.email]);
 
   useEffect(() => {
     if (!user?.email) {
@@ -103,11 +135,105 @@ export default function Nav() {
     { href: "/Component/notifications", label: "Updates" },
   ];
 
+  const recentNotifications = useMemo(() => notifications.slice(0, 5), [notifications]);
+
+  async function markNotificationRead(notificationId: number) {
+    try {
+      await fetchJson<CampusNotification>(
+        `${API_BASE_URL}/notifications/${notificationId}/read`,
+        withActorHeaders({ method: "PATCH" })
+      );
+
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === notificationId ? { ...notification, read: true } : notification
+        )
+      );
+      setUnreadCount((current) => Math.max(current - 1, 0));
+    } catch {
+      // Keep dropdown usable even if a background mark-read fails.
+    }
+  }
+
   function logout() {
     window.localStorage.removeItem("smartcampusUser");
     setUser(null);
+    setNotifications([]);
+    setUnreadCount(0);
     router.push("/");
   }
+
+  const bellButton = user ? (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsNotificationOpen((current) => !current)}
+        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-sm transition hover:border-orange-200 hover:text-orange-900"
+        aria-label="Open notifications"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 1 1-6 0" />
+        </svg>
+        {unreadCount > 0 ? (
+          <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+            {unreadCount}
+          </span>
+        ) : null}
+      </button>
+
+      {isNotificationOpen ? (
+        <div className="absolute right-0 top-14 w-80 overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.18)]">
+          <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-400">Alerts</p>
+              <p className="text-sm font-semibold text-stone-900">{unreadCount} unread</p>
+            </div>
+            <Link
+              href="/Component/notifications"
+              onClick={() => setIsNotificationOpen(false)}
+              className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700 transition hover:text-orange-900"
+            >
+              View all
+            </Link>
+          </div>
+
+          <div className="max-h-96 overflow-y-auto p-2">
+            {recentNotifications.length === 0 ? (
+              <div className="px-3 py-6 text-sm text-stone-500">No notifications yet.</div>
+            ) : (
+              recentNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`mb-2 rounded-2xl border px-3 py-3 last:mb-0 ${
+                    notification.read ? "border-stone-100 bg-stone-50" : "border-orange-100 bg-orange-50/70"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-stone-950">{notification.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-stone-600">{notification.message}</p>
+                      <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">
+                        {notification.type.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    {!notification.read ? (
+                      <button
+                        type="button"
+                        onClick={() => void markNotificationRead(notification.id)}
+                        className="rounded-full border border-orange-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-orange-800 transition hover:bg-orange-100"
+                      >
+                        Mark
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  ) : null;
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -154,6 +280,7 @@ export default function Nav() {
         <div className="flex flex-wrap items-center gap-3">
           {user ? (
             <>
+              {bellButton}
               <div className="hidden rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-right lg:block">
                 <p className="text-xs uppercase tracking-[0.28em] text-stone-400">Signed in</p>
                 <p className="text-sm font-semibold text-stone-900">

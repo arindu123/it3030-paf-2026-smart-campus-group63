@@ -3,6 +3,7 @@ package com.sliit.smartcampus.entity;
 import com.sliit.smartcampus.enums.BookingStatus;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -32,6 +33,19 @@ public class Booking {
     @Enumerated(EnumType.STRING)
     private BookingStatus status;
 
+    @Column(nullable = false)
+    private String createdBy;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by_user_id")
+    private User createdByUser;
+
+    @Column(length = 500)
+    private String rejectionReason;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
     // Constructors
     public Booking() {}
 
@@ -45,6 +59,23 @@ public class Booking {
         this.purpose = purpose;
         this.expectedAttendees = expectedAttendees;
         this.status = status;
+    }
+
+    @PrePersist
+    public void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+        if (status == null) {
+            status = BookingStatus.PENDING;
+        }
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
     // Getters & Setters
@@ -110,5 +141,45 @@ public class Booking {
 
     public void setStatus(BookingStatus status) {
         this.status = status;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public User getCreatedByUser() {
+        return createdByUser;
+    }
+
+    public void setCreatedByUser(User createdByUser) {
+        this.createdByUser = createdByUser;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }
