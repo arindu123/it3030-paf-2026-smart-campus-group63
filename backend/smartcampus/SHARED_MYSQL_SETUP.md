@@ -18,10 +18,5 @@ $env:DB_PASSWORD="ChangeThisPassword"
 ## 3) Run backend with shared profile
 ```powershell
 cd backend/smartcampus
-.\run-backend.ps1 -Profile shared
-```
-
-## 4) Run backend with local H2 profile
-```powershell
-.\run-backend.ps1 -Profile local
+.\run-backend.ps1
 ```
