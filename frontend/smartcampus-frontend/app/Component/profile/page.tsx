@@ -44,11 +44,11 @@ export default function ProfilePage() {
           aside={
             <div className="grid gap-4">
               <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Role</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Role</p>
                 <p className="mt-3 text-3xl font-semibold">{user?.role || "Guest"}</p>
               </div>
               <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-green-200">Account State</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Account State</p>
                 <p className="mt-3 text-lg font-semibold">
                   {user ? "Signed in and ready" : "No active local session"}
                 </p>

@@ -18,8 +18,8 @@ const monoFont = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Smart Campus",
-  description: "Smart Campus frontend for resources, bookings, maintenance tickets, and dashboards.",
+  title: "UniDesk",
+  description: "UniDesk platform for resources, bookings, maintenance tickets, and dashboards.",
 };
 
 export default function RootLayout({

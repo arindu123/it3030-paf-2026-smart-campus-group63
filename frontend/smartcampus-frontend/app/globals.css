@@ -1,17 +1,23 @@
 @import "tailwindcss";
 
 :root {
+  /* UniDesk Color Palette */
   /* 60% dominant — clean neutral whites */
-  --background: #fafaf9;
-  --foreground: #1c1917;
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --border-soft: rgba(28, 25, 23, 0.1);
-  /* 30% secondary — brand forest green */
-  --brand: #17834f;
-  --brand-deep: #0f4a2d;
-  /* 10% accent — warm amber for CTAs and highlights */
-  --accent: #d97706;
+  --background: #ffffff;
+  --background-secondary: #f5f7fa;
+  --foreground: #082156;
+  --foreground-secondary: #6b7280;
+  --surface: rgba(255, 255, 255, 0.95);
+  --surface-strong: rgba(255, 255, 255, 0.98);
+  --border-soft: rgba(10, 43, 107, 0.1);
+  /* Primary — Vibrant Orange */
+  --brand: #ee9b13;
+  --brand-dark: #d78a0f;
+  /* Deep Navy Blue */
+  --brand-deep: #0a2b6b;
+  /* Accent colors */
+  --accent: #ee9b13;
+  --accent-hover: #d78a0f;
 }
 
 @theme inline {

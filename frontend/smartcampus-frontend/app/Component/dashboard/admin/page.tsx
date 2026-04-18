@@ -284,7 +284,7 @@ export default function AdminDashboardPage() {
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Name, email, role, department"
-                  className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100 sm:w-80"
+                  className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 sm:w-80"
                 />
               </label>
             </div>
@@ -318,7 +318,7 @@ export default function AdminDashboardPage() {
                               [user.id]: normalizeRole(event.target.value),
                             }))
                           }
-                          className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                          className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                         >
                           {userRoles.map((role) => (
                             <option key={role} value={role}>
@@ -349,7 +349,7 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-2">
-                          <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.online ? "bg-emerald-100 text-emerald-800" : "bg-stone-100 text-stone-500"}`}>
+                          <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.online ? "bg-orange-100 text-orange-800" : "bg-stone-100 text-stone-500"}`}>
                             {user.online ? "Online" : "Offline"}
                           </span>
                           <p className="text-xs text-stone-500">

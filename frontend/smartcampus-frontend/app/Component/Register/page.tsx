@@ -82,7 +82,7 @@ export default function RegisterFormPage() {
         <GlassPanel className="p-7 sm:p-8">
           <Eyebrow>Register</Eyebrow>
           <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-stone-950 sm:text-4xl">
-            Create your Smart Campus account
+            Create your UniDesk account
           </h1>
           <p className="mt-3 text-sm leading-7 text-stone-600">
             Set up your user profile once, then move straight into resources, bookings, and support.
@@ -102,7 +102,7 @@ export default function RegisterFormPage() {
                 type="text"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -113,7 +113,7 @@ export default function RegisterFormPage() {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -124,7 +124,7 @@ export default function RegisterFormPage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -135,7 +135,7 @@ export default function RegisterFormPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -146,7 +146,7 @@ export default function RegisterFormPage() {
                 type="tel"
                 value={phoneNumber}
                 onChange={(event) => setPhoneNumber(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -157,7 +157,7 @@ export default function RegisterFormPage() {
                 type="text"
                 value={department}
                 onChange={(event) => setDepartment(event.target.value)}
-                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+                className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                 required
               />
             </label>
@@ -165,18 +165,18 @@ export default function RegisterFormPage() {
             <button
               type="submit"
               disabled={loading}
-              className="md:col-span-2 rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 font-semibold text-white shadow-lg shadow-amber-900/15 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+              className="md:col-span-2 rounded-full bg-[linear-gradient(135deg,#EE9B13,#D78A0F)] px-5 py-3 font-semibold text-white shadow-lg shadow-orange-900/15 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? "Creating account..." : "Register"}
             </button>
           </form>
 
           {message ? (
-            <p className={`mt-4 text-sm ${isError ? "text-red-600" : "text-emerald-700"}`}>{message}</p>
+            <p className={`mt-4 text-sm ${isError ? "text-red-600" : "text-orange-600"}`}>{message}</p>
           ) : null}
         </GlassPanel>
 
-        <GlassPanel className="bg-[linear-gradient(160deg,rgba(10,35,32,0.96),rgba(24,94,73,0.92))] text-slate-50">
+        <GlassPanel className="bg-[linear-gradient(160deg,rgba(10,43,107,0.98),rgba(14,58,130,0.94))] text-slate-50">
           <Eyebrow>Account Benefits</Eyebrow>
           <h2 className="mt-5 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
             One account for the entire campus flow.
@@ -188,15 +188,15 @@ export default function RegisterFormPage() {
 
           <div className="mt-10 grid gap-4">
             <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
-              <p className="text-xs uppercase tracking-[0.28em] text-emerald-200">Access</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-orange-300">Access</p>
               <p className="mt-3 text-lg font-semibold">Instant route into the correct role workflow</p>
             </div>
             <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
-              <p className="text-xs uppercase tracking-[0.28em] text-emerald-200">Convenience</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-orange-300">Convenience</p>
               <p className="mt-3 text-lg font-semibold">Simple onboarding with email fields or Google sign-in</p>
             </div>
             <div className="rounded-[1.6rem] border border-white/10 bg-white/10 p-5">
-              <p className="text-xs uppercase tracking-[0.28em] text-emerald-200">Clarity</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-orange-300">Clarity</p>
               <p className="mt-3 text-lg font-semibold">A cleaner visual language across all operational pages</p>
             </div>
           </div>

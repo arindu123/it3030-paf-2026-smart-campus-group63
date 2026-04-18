@@ -426,7 +426,7 @@ export default function TicketPage() {
       <div className="mx-auto max-w-7xl">
           <DashboardHero
             description="This ticket desk is wired to your Spring Boot backend on port 8089 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
-            eyebrow="Smart Campus Ticket Desk"
+            eyebrow="UniDesk Ticket Desk"
             error={error}
             message={message}
             onRefresh={() => void loadTickets()}
@@ -594,7 +594,7 @@ export default function TicketPage() {
                             {ticket.description}
                           </p>
                         </div>
-                        <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">
+                        <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
                           {ticket.status}
                         </span>
                       </div>

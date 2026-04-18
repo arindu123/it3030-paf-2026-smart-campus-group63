@@ -29,7 +29,7 @@ export function DashboardHero({
     <section className="mb-8 overflow-hidden rounded-[2.2rem] border border-white/60 bg-white/78 p-6 shadow-[0_24px_80px_rgba(45,32,15,0.13)] backdrop-blur md:p-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.32em] text-emerald-700">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.32em] text-orange-600">
             {eyebrow}
           </p>
           <h1 className="text-4xl font-semibold tracking-[-0.04em] text-stone-950 md:text-5xl">
@@ -94,10 +94,10 @@ export function StatusCard({
 }>) {
   const toneClass =
     tone === "warm"
-      ? "bg-emerald-100 text-emerald-900"
+      ? "bg-orange-100 text-orange-900"
       : tone === "cool"
-        ? "bg-green-50 text-green-900"
-        : "bg-green-950 text-white";
+        ? "bg-orange-50 text-orange-900"
+        : "bg-blue-950 text-white";
 
   return (
     <div className={`rounded-[1.75rem] px-5 py-5 shadow-sm ${toneClass}`}>
@@ -124,7 +124,7 @@ export function Field({
     <label className="grid gap-2 text-sm font-medium text-stone-700">
       {label}
       <input
-        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         type={type}
@@ -149,7 +149,7 @@ export function TextAreaField({
     <label className="grid gap-2 text-sm font-medium text-stone-700">
       {label}
       <textarea
-        className="min-h-28 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+        className="min-h-28 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         value={value}
@@ -173,7 +173,7 @@ export function SelectField({
     <label className="grid gap-2 text-sm font-medium text-stone-700">
       {label}
       <select
-        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
+        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >

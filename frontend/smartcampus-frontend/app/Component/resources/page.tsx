@@ -156,7 +156,7 @@ export default function ResourcesPage() {
       <div className="mx-auto max-w-7xl">
           <DashboardHero
             description="This resource workspace is wired to your Spring Boot backend on port 8089 so you can register labs, rooms, and equipment, then update live availability from one page."
-            eyebrow="Smart Campus Resource Desk"
+            eyebrow="UniDesk Resource Desk"
             error={error}
             message={message}
             onRefresh={() => void loadResources()}
@@ -276,7 +276,7 @@ export default function ResourcesPage() {
                             {resource.description}
                           </p>
                         </div>
-                        <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">
+                        <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
                           {resource.status}
                         </span>
                       </div>
@@ -292,7 +292,7 @@ export default function ResourcesPage() {
 
                       <div className="mt-5 flex flex-wrap gap-3">
                         <button
-                          className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
+                          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-500"
                           onClick={() => void updateResourceStatus(resource.id, "ACTIVE")}
                           type="button"
                         >

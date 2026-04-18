@@ -6,6 +6,9 @@ const accentStyles = {
   // 60% neutral base with 10% amber warmth glow
   amber:
     "bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.10),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.72),_transparent_30%),linear-gradient(180deg,_#fafaf9_0%,_#f5f5f4_52%,_#e7e5e4_100%)]",
+  // 60% neutral base with UniDesk orange glow
+  orange:
+    "bg-[radial-gradient(circle_at_top_left,_rgba(238,155,19,0.12),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.75),_transparent_32%),linear-gradient(180deg,_#fafaf9_0%,_#f5f5f4_52%,_#e7e5e4_100%)]",
   // 60% neutral base with subtle sky glow
   sky:
     "bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.08),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.75),_transparent_32%),linear-gradient(180deg,_#fafaf9_0%,_#f5f5f4_52%,_#e7e5e4_100%)]",
@@ -34,7 +37,7 @@ export function SiteFrame({
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Nav />
-        <main className="flex-1 px-4 pb-14 pt-6 sm:px-6 lg:px-10">{children}</main>
+        <main className="flex-1 px-4 pb-14 pt-28 sm:px-6 lg:px-10">{children}</main>
         <Footer />
       </div>
     </div>
@@ -92,7 +95,7 @@ export function PageHero({
           {actions ? <div className="mt-8 flex flex-wrap gap-4">{actions}</div> : null}
         </div>
 
-        <div className="relative overflow-hidden rounded-b-[2rem] rounded-t-[1.5rem] border-l border-white/40 bg-[linear-gradient(160deg,rgba(12,40,26,0.96),rgba(28,104,63,0.9))] p-6 text-slate-50 sm:p-8 lg:rounded-l-[2rem] lg:rounded-r-none">
+        <div className="relative overflow-hidden rounded-b-[2rem] rounded-t-[1.5rem] border-l border-white/40 bg-[linear-gradient(160deg,rgba(10,43,107,0.98),rgba(14,58,130,0.94))] p-6 text-slate-50 sm:p-8 lg:rounded-l-[2rem] lg:rounded-r-none">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_34%)]" />
           <div className="relative z-10">{aside}</div>
         </div>
