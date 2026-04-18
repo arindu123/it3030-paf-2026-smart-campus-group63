@@ -47,7 +47,7 @@ export function RoleDashboard({
             <div className="grid gap-4">
               {metrics.slice(0, 2).map((metric) => (
                 <div key={metric.label} className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
-                  <p className="text-xs uppercase tracking-[0.28em] text-green-200">{metric.label}</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-orange-600">{metric.label}</p>
                   <p className="mt-3 text-3xl font-semibold">{metric.value}</p>
                   <p className="mt-2 text-sm text-slate-200">{metric.detail}</p>
                 </div>

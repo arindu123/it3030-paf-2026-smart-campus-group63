@@ -11,6 +11,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "users")
 public class User {
@@ -44,6 +46,12 @@ public class User {
 
     @Column(nullable = true)
     private String providerId;
+
+    @Column(nullable = true)
+    private Instant lastLoginAt;
+
+    @Column(nullable = true)
+    private Instant lastSeenAt;
 
     public Long getId() {
         return id;
@@ -115,5 +123,21 @@ public class User {
 
     public void setProviderId(String providerId) {
         this.providerId = providerId;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(Instant lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public Instant getLastSeenAt() {
+        return lastSeenAt;
+    }
+
+    public void setLastSeenAt(Instant lastSeenAt) {
+        this.lastSeenAt = lastSeenAt;
     }
 }

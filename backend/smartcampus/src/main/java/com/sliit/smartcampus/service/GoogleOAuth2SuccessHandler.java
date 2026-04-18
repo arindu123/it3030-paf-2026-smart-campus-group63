@@ -48,7 +48,7 @@ public class GoogleOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
                 return;
             }
 
-            User user = userService.handleGoogleLogin(email, name, providerId);
+            User user = userService.recordLogin(userService.handleGoogleLogin(email, name, providerId));
             UserRole role = user.getRole() == null ? UserRole.USER : user.getRole();
 
             String redirectUrl = UriComponentsBuilder

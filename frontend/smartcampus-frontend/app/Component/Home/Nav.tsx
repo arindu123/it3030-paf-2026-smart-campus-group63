@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../shared/campusApi";
 
 type StoredUser = {
   email: string;
@@ -10,28 +11,91 @@ type StoredUser = {
   role?: "USER" | "ADMIN" | "TECHNICIAN";
 };
 
+function getDashboardByRole(role?: "USER" | "ADMIN" | "TECHNICIAN") {
+  if (role === "ADMIN") {
+    return "/Component/dashboard/admin";
+  }
+
+  if (role === "TECHNICIAN") {
+    return "/Component/dashboard/technician";
+  }
+
+  return "/Component/dashboard/user";
+}
+
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem("smartcampusUser");
-    if (!raw) {
-      setUser(null);
+    const timeoutId = window.setTimeout(() => {
+      const raw = window.localStorage.getItem("smartcampusUser");
+
+      if (!raw) {
+        return;
+      }
+
+      try {
+        setUser(JSON.parse(raw) as StoredUser);
+      } catch {
+        window.localStorage.removeItem("smartcampusUser");
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    if (!user?.email) {
       return;
     }
 
-    try {
-      setUser(JSON.parse(raw) as StoredUser);
-    } catch {
-      window.localStorage.removeItem("smartcampusUser");
-      setUser(null);
+    let aborted = false;
+    const email = user.email;
+
+    async function pingPresence() {
+      if (aborted) {
+        return;
+      }
+
+      try {
+        await fetch(`${API_BASE_URL}/presence/heartbeat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+          keepalive: true,
+        });
+      } catch {
+        // Best-effort presence updates only.
+      }
     }
-  }, []);
+
+    void pingPresence();
+    const intervalId = window.setInterval(() => {
+      void pingPresence();
+    }, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void pingPresence();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      aborted = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [user?.email]);
 
   const navItems = [
-    { href: "/", label: "Home" },
+    ...(!user ? [{ href: "/", label: "Home" }] : []),
+    ...(user ? [{ href: getDashboardByRole(user.role), label: "Dashboard" }] : []),
     { href: "/Component/resources", label: "Resources" },
     { href: "/Component/bookings", label: "Bookings" },
     { href: "/Component/Ticket", label: "Tickets" },
@@ -45,19 +109,19 @@ export default function Nav() {
   }
 
   return (
-    <header className="sticky top-0 z-50 px-4 pt-4 sm:px-6 lg:px-10">
-      <nav className="mx-auto flex max-w-7xl flex-col gap-4 rounded-[1.75rem] border border-white/60 bg-white/72 px-5 py-4 shadow-[0_18px_50px_rgba(42,31,17,0.12)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+    <header className="fixed inset-x-0 top-0 z-50">
+      <nav className="flex w-full flex-col gap-4 border-b border-white/60 bg-white/90 px-5 py-4 shadow-[0_18px_50px_rgba(42,31,17,0.12)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="group">
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#179157,#0f4a2d)] text-lg font-semibold text-white shadow-lg shadow-emerald-900/25">
-                SC
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#EE9B13,#0A2B6B)] text-lg font-semibold text-white shadow-lg shadow-orange-900/25">
+                U
               </span>
               <div>
                 <p className="text-lg font-semibold tracking-[-0.03em] text-stone-950">
-                  Smart Campus
+                  UniDesk
                 </p>
-                <p className="text-xs uppercase tracking-[0.28em] text-stone-500">
+                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">
                   Operations Suite
                 </p>
               </div>
@@ -65,7 +129,7 @@ export default function Nav() {
           </Link>
 
           {user ? (
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-800 lg:hidden">
+            <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-orange-800 lg:hidden">
               {user.role || "USER"}
             </span>
           ) : null}
@@ -81,7 +145,7 @@ export default function Nav() {
                 href={item.href}
                 className={`rounded-full px-4 py-2 transition ${
                   isActive
-                    ? "border border-amber-200 bg-amber-100 text-amber-950 shadow-sm"
+                    ? "border border-orange-200 bg-orange-100 text-orange-900 shadow-sm"
                     : "hover:bg-stone-100 hover:text-stone-950"
                 }`}
               >
@@ -108,7 +172,7 @@ export default function Nav() {
               </Link>
               <button
                 onClick={logout}
-                className="rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-900/25 transition hover:brightness-105"
+                className="rounded-full bg-[linear-gradient(135deg,#EE9B13,#D78A0F)] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-900/25 transition hover:brightness-105"
               >
                 Logout
               </button>
@@ -123,7 +187,7 @@ export default function Nav() {
               </Link>
               <Link
                 href="/Component/Register"
-                className="rounded-full border border-amber-200 bg-amber-100 px-5 py-2 text-sm font-semibold text-amber-950 shadow-sm transition hover:bg-amber-200"
+                className="rounded-full border border-orange-200 bg-orange-100 px-5 py-2 text-sm font-semibold text-orange-900 shadow-sm transition hover:bg-orange-200"
               >
                 Register
               </Link>

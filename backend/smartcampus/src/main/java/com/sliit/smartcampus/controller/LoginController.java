@@ -43,6 +43,8 @@ public class LoginController {
                     .body(new LoginResponse(false, "Invalid username or password"));
         }
 
-        return ResponseEntity.ok(new LoginResponse(true, "Login successful", user.getEmail(), user.getFullName(), user.getRole().name()));
+        User updatedUser = userService.recordLogin(user);
+
+        return ResponseEntity.ok(new LoginResponse(true, "Login successful", updatedUser.getEmail(), updatedUser.getFullName(), updatedUser.getRole().name()));
     }
 }
