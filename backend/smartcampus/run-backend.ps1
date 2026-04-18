@@ -19,19 +19,7 @@ if ($existingConnection) {
     Start-Sleep -Seconds 1
 }
 
-Write-Host "Starting Smart Campus backend on port $Port using profile '$Profile'..."
+Write-Host "Starting Smart Campus backend on port $Port using profile 'shared'..."
 $env:SERVER_PORT = "$Port"
-$env:SPRING_PROFILES_ACTIVE = $Profile
-$env:DB_URL = $DbUrl
-$env:DB_USERNAME = $DbUsername
-$env:DB_PASSWORD = $DbPassword
-
-if ($GoogleClientId) {
-    $env:GOOGLE_CLIENT_ID = $GoogleClientId
-}
-
-if ($GoogleClientSecret) {
-    $env:GOOGLE_CLIENT_SECRET = $GoogleClientSecret
-}
-
+$env:SPRING_PROFILES_ACTIVE = "shared"
 & ".\mvnw.cmd" spring-boot:run

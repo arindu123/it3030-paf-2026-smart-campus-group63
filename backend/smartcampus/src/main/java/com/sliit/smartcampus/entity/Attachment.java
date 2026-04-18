@@ -1,11 +1,19 @@
 package com.sliit.smartcampus.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+
+import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "attachment")
 public class Attachment {
 
     @Id
@@ -15,7 +23,21 @@ public class Attachment {
     private String fileName;
     private String fileType;
     private String filePath;
-    private Long ticketId;
+
+    @Column(name = "stored_file_name")
+    private String storedFileName;
+
+    private Long fileSize;
+    private LocalDateTime uploadedAt;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "ticket_id", nullable = false)
+    private Ticket ticket;
+
+    @PrePersist
+    public void onCreate() {
+        uploadedAt = (uploadedAt == null) ? LocalDateTime.now() : uploadedAt;
+    }
 
     public Long getId() {
         return id;
@@ -49,11 +71,35 @@ public class Attachment {
         this.filePath = filePath;
     }
 
-    public Long getTicketId() {
-        return ticketId;
+    public String getStoredFileName() {
+        return storedFileName;
     }
 
-    public void setTicketId(Long ticketId) {
-        this.ticketId = ticketId;
+    public void setStoredFileName(String storedFileName) {
+        this.storedFileName = storedFileName;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public LocalDateTime getUploadedAt() {
+        return uploadedAt;
+    }
+
+    public void setUploadedAt(LocalDateTime uploadedAt) {
+        this.uploadedAt = uploadedAt;
+    }
+
+    public Ticket getTicket() {
+        return ticket;
+    }
+
+    public void setTicket(Ticket ticket) {
+        this.ticket = ticket;
     }
 }
