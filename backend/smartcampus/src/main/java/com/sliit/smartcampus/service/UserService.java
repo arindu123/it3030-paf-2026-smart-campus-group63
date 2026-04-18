@@ -1,6 +1,7 @@
 package com.sliit.smartcampus.service;
 
 import com.sliit.smartcampus.dto.LoginRequest;
+import com.sliit.smartcampus.dto.AdminCreateUserRequest;
 import com.sliit.smartcampus.dto.RegisterRequest;
 import com.sliit.smartcampus.entity.User;
 import com.sliit.smartcampus.enums.AuthProvider;
@@ -52,6 +53,54 @@ public class UserService {
         user.setDepartment(request.getDepartment());
         user.setRole(UserRole.USER);
         user.setProvider(AuthProvider.LOCAL);
+        user.setLastLoginAt(null);
+        user.setLastSeenAt(null);
+
+        return userRepository.save(user);
+    }
+
+    public User createAdminUser(AdminCreateUserRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        if (request.getFullName() == null || request.getFullName().isBlank()
+            || request.getEmail() == null || request.getEmail().isBlank()
+            || request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()
+            || request.getDepartment() == null || request.getDepartment().isBlank()) {
+            throw new IllegalArgumentException("All user fields are required");
+        }
+
+        if (!request.getEmail().contains("@") || !request.getEmail().contains(".")) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+
+        UserRole role = request.getRole() == null ? UserRole.USER : request.getRole();
+        AuthProvider provider = request.getProvider() == null ? AuthProvider.LOCAL : request.getProvider();
+
+        if (provider == AuthProvider.LOCAL) {
+            if (request.getPassword() == null || request.getPassword().isBlank()) {
+                throw new IllegalArgumentException("Password is required for LOCAL accounts");
+            }
+            if (request.getPassword().length() < 6) {
+                throw new IllegalArgumentException("Password must be at least 6 characters");
+            }
+            if (!request.getPassword().equals(request.getConfirmPassword())) {
+                throw new IllegalArgumentException("Confirm password does not match");
+            }
+        }
+
+        User user = new User();
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setDepartment(request.getDepartment());
+        user.setRole(role);
+        user.setProvider(provider);
+        user.setProviderId(null);
+        user.setPassword(provider == AuthProvider.GOOGLE
+            ? "GOOGLE_" + UUID.randomUUID()
+            : request.getPassword());
         user.setLastLoginAt(null);
         user.setLastSeenAt(null);
 

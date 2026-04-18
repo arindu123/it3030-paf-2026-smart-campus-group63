@@ -45,6 +45,15 @@ export default function AdminDashboardPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [roleEdits, setRoleEdits] = useState<Record<number, UserRole>>({});
   const [activeUserAction, setActiveUserAction] = useState<number | null>(null);
+  const [newUserFullName, setNewUserFullName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPhoneNumber, setNewUserPhoneNumber] = useState("");
+  const [newUserDepartment, setNewUserDepartment] = useState("");
+  const [newUserRole, setNewUserRole] = useState<UserRole>("TECHNICIAN");
+  const [newUserProvider, setNewUserProvider] = useState<"LOCAL" | "GOOGLE">("GOOGLE");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserConfirmPassword, setNewUserConfirmPassword] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Loading admin data...");
   const [error, setError] = useState("");
@@ -206,6 +215,52 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function createUser(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreatingUser(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: newUserFullName,
+          email: newUserEmail,
+          phoneNumber: newUserPhoneNumber,
+          department: newUserDepartment,
+          role: newUserRole,
+          provider: newUserProvider,
+          password: newUserPassword,
+          confirmPassword: newUserConfirmPassword,
+        }),
+      });
+
+      const body = await response.json().catch(() => ({ message: "User create failed" }));
+
+      if (!response.ok) {
+        throw new Error(body.message || "User create failed");
+      }
+
+      setMessage(`Created ${newUserRole.toLowerCase()} account.`);
+      setNewUserFullName("");
+      setNewUserEmail("");
+      setNewUserPhoneNumber("");
+      setNewUserDepartment("");
+      setNewUserRole("TECHNICIAN");
+      setNewUserProvider("GOOGLE");
+      setNewUserPassword("");
+      setNewUserConfirmPassword("");
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "User create failed");
+    } finally {
+      setCreatingUser(false);
+    }
+  }
+
   return (
     <SiteFrame accent="sky">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
@@ -268,6 +323,122 @@ export default function AdminDashboardPage() {
 
         <section className="grid gap-6">
           <GlassPanel>
+            <div className="rounded-3xl border border-stone-200 bg-stone-50/80 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Create Access</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-stone-950">
+                    Add admin or technician account
+                  </h2>
+                  <p className="mt-2 text-sm text-stone-600">
+                    Pre-create a Google account here so the technician can use Continue with Google and land in the technician dashboard.
+                  </p>
+                </div>
+              </div>
+
+              <form className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={createUser}>
+                <label className="grid gap-2 text-sm font-medium text-stone-700">
+                  Full Name
+                  <input
+                    value={newUserFullName}
+                    onChange={(event) => setNewUserFullName(event.target.value)}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                    required
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700">
+                  Email
+                  <input
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(event) => setNewUserEmail(event.target.value)}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                    required
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700">
+                  Phone Number
+                  <input
+                    value={newUserPhoneNumber}
+                    onChange={(event) => setNewUserPhoneNumber(event.target.value)}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                    required
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700">
+                  Department
+                  <input
+                    value={newUserDepartment}
+                    onChange={(event) => setNewUserDepartment(event.target.value)}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                    required
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700">
+                  Role
+                  <select
+                    value={newUserRole}
+                    onChange={(event) => setNewUserRole(normalizeRole(event.target.value))}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                  >
+                    {userRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700">
+                  Sign-in Provider
+                  <select
+                    value={newUserProvider}
+                    onChange={(event) => setNewUserProvider(event.target.value as "LOCAL" | "GOOGLE")}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                  >
+                    <option value="GOOGLE">GOOGLE</option>
+                    <option value="LOCAL">LOCAL</option>
+                  </select>
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700 md:col-span-2 xl:col-span-1">
+                  Password
+                  <input
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(event) => setNewUserPassword(event.target.value)}
+                    placeholder={newUserProvider === "GOOGLE" ? "Optional for Google accounts" : "Required for local accounts"}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-stone-700 md:col-span-2 xl:col-span-1">
+                  Confirm Password
+                  <input
+                    type="password"
+                    value={newUserConfirmPassword}
+                    onChange={(event) => setNewUserConfirmPassword(event.target.value)}
+                    placeholder={newUserProvider === "GOOGLE" ? "Optional for Google accounts" : "Required for local accounts"}
+                    className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                  />
+                </label>
+
+                <div className="flex items-end md:col-span-2 xl:col-span-3">
+                  <button
+                    type="submit"
+                    disabled={creatingUser}
+                    className="rounded-full bg-[linear-gradient(135deg,#EE9B13,#D78A0F)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {creatingUser ? "Creating..." : "Create Account"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-stone-500">User Management</p>
