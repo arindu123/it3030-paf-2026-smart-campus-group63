@@ -14,6 +14,7 @@ public class BookingResponse {
     private Integer expectedAttendees;
     private String status;
     private String createdBy;
+    private String createdByFullName;
     private String rejectionReason;
     private String createdAt;
 
@@ -102,6 +103,14 @@ public class BookingResponse {
 
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public String getCreatedByFullName() {
+        return createdByFullName;
+    }
+
+    public void setCreatedByFullName(String createdByFullName) {
+        this.createdByFullName = createdByFullName;
     }
 
     public String getRejectionReason() {

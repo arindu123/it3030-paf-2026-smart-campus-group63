@@ -137,6 +137,7 @@ export type Booking = {
   status: string;
   resourceName?: string;
   createdBy?: string;
+  createdByFullName?: string;
   rejectionReason?: string;
   createdAt?: string;
 };

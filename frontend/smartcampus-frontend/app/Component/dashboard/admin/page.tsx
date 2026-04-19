@@ -226,6 +226,8 @@ export default function AdminDashboardPage() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [approvingBookingId, setApprovingBookingId] = useState<number | null>(null);
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -642,6 +644,26 @@ export default function AdminDashboardPage() {
     setRejectionReason("");
   }
 
+  function openApproveModal(bookingId: number) {
+    setApprovingBookingId(bookingId);
+    setError("");
+    setIsApproveModalOpen(true);
+  }
+
+  function closeApproveModal() {
+    setIsApproveModalOpen(false);
+    setApprovingBookingId(null);
+  }
+
+  async function submitApproveBooking() {
+    if (approvingBookingId == null) {
+      return;
+    }
+
+    await approveBooking(approvingBookingId);
+    closeApproveModal();
+  }
+
   async function submitRejectBooking() {
     if (rejectingBookingId == null) {
       return;
@@ -671,6 +693,27 @@ export default function AdminDashboardPage() {
       await loadAdminData();
     } catch (bookingError) {
       setError(bookingError instanceof Error ? bookingError.message : "Failed to reject booking.");
+    } finally {
+      setActiveBookingAction(null);
+    }
+  }
+
+  async function cancelBookingFromAdmin(bookingId: number) {
+    setError("");
+    setActiveBookingAction(bookingId);
+
+    try {
+      await fetchJson(`${API_BASE_URL}/bookings/${bookingId}`, {
+        method: "DELETE",
+        headers: {
+          "X-User-Email": currentAdminEmail,
+        },
+      });
+
+      setMessage(`Booking #${bookingId} cancelled.`);
+      await loadAdminData();
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel booking.");
     } finally {
       setActiveBookingAction(null);
     }
@@ -1237,7 +1280,8 @@ export default function AdminDashboardPage() {
                       </div>
 
                       <div className="mt-4 grid gap-2 text-sm text-stone-600">
-                        <p>Requested by: {booking.createdBy}</p>
+                        <p>Requested by: {booking.createdByFullName || booking.createdBy}</p>
+                        <p>Email: {booking.createdBy}</p>
                         <p>Date: {booking.date}</p>
                         <p>Time: {booking.startTime} - {booking.endTime}</p>
                         <p>Expected Attendees: {booking.expectedAttendees}</p>
@@ -1261,6 +1305,101 @@ export default function AdminDashboardPage() {
                           Reject
                         </button>
                       </div>
+                    </article>
+                  ))
+              )}
+            </div>
+          </Panel>
+        </section>
+
+        <section className="grid gap-6">
+          <Panel
+            eyebrow="Booking Overview"
+            title="All approved and rejected bookings"
+            description="View all processed bookings and manage them as needed."
+          >
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {bookings.filter((b) => b.status === "APPROVED" || b.status === "REJECTED" || b.status === "CANCELLED").length === 0 ? (
+                <div className="md:col-span-2 lg:col-span-3">
+                  <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-8 text-center text-sm text-stone-500">
+                    No approved, rejected, or cancelled bookings yet.
+                  </div>
+                </div>
+              ) : (
+                bookings
+                  .filter((booking) => booking.status === "APPROVED" || booking.status === "REJECTED" || booking.status === "CANCELLED")
+                  .map((booking) => (
+                    <article
+                      key={booking.id}
+                      className="group relative overflow-hidden rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-stone-300 hover:shadow-lg"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-lg font-semibold text-stone-950 group-hover:text-stone-900">
+                            {booking.resourceName || "Resource Booking"}
+                          </h3>
+                          <p className="mt-1 line-clamp-2 text-sm text-stone-600">
+                            {booking.purpose}
+                          </p>
+                        </div>
+                        <span className={`ml-3 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium uppercase tracking-wide ${
+                          booking.status === "APPROVED"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : booking.status === "REJECTED"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-stone-200 text-stone-700"
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 space-y-2 text-sm text-stone-600">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">By:</span>
+                          <span className="truncate">{booking.createdByFullName || booking.createdBy}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span>{booking.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>{booking.startTime} - {booking.endTime}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="h-4 w-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <span>{booking.expectedAttendees} attendees</span>
+                        </div>
+                      </div>
+
+                      {booking.rejectionReason ? (
+                        <div className="mt-3 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+                          <p className="font-medium">Rejection:</p>
+                          <p className="line-clamp-2">{booking.rejectionReason}</p>
+                        </div>
+                      ) : null}
+
+                      {booking.status !== "CANCELLED" ? (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={activeBookingAction === booking.id}
+                            onClick={() => void cancelBookingFromAdmin(booking.id)}
+                            type="button"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Cancel
+                          </button>
+                        </div>
+                      ) : null}
                     </article>
                   ))
               )}

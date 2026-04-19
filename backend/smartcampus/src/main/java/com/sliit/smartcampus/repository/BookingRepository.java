@@ -19,4 +19,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime,
             @Param("status") BookingStatus status);
+
+    @Query("SELECT b FROM Booking b WHERE LOWER(b.createdBy) = LOWER(:userEmail) ORDER BY b.createdAt DESC")
+    List<Booking> findByCreatedByEmail(@Param("userEmail") String userEmail);
 }
