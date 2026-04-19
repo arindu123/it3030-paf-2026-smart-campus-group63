@@ -6,7 +6,7 @@ import java.time.LocalTime;
 
 public class BookingRequest {
 
-    private Long resourceId;
+    private String resourceName;
     
     @JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
@@ -22,12 +22,12 @@ public class BookingRequest {
 
     public BookingRequest() {}
 
-    public Long getResourceId() {
-        return resourceId;
+    public String getResourceName() {
+        return resourceName;
     }
 
-    public void setResourceId(Long resourceId) {
-        this.resourceId = resourceId;
+    public void setResourceName(String resourceName) {
+        this.resourceName = resourceName;
     }
 
     public LocalDate getDate() {
