@@ -57,6 +57,9 @@ export default function TicketPage() {
   const [message, setMessage] = useState("Ticket desk is ready.");
   const [error, setError] = useState("");
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string>("");
+  const [previewImageName, setPreviewImageName] = useState<string>("");
 
   const authFetchJson = useCallback(
     async <T,>(url: string, init?: RequestInit) => {
@@ -441,6 +444,7 @@ export default function TicketPage() {
   }
 
   const closeTicketModal = () => setIsTicketModalOpen(false);
+  const closePreview = () => setIsPreviewOpen(false);
 
   const ticketFormModal = (
     <div
@@ -697,22 +701,30 @@ export default function TicketPage() {
                           {ticket.attachments?.length ? (
                             <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                               {ticket.attachments.map((attachment) => (
-                                <div
+                                <button
                                   key={attachment.id}
-                                  className="overflow-hidden rounded-xl border border-stone-200 bg-white"
+                                  type="button"
+                                  onClick={() => {
+                                    setPreviewImageUrl(`${BACKEND_BASE_URL}${attachment.downloadUrl}`);
+                                    setPreviewImageName(attachment.fileName);
+                                    setIsPreviewOpen(true);
+                                  }}
+                                  className="group overflow-hidden rounded-3xl border border-stone-200 bg-white p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                                 >
-                                  <img
-                                    alt={attachment.fileName}
-                                    className="h-28 w-full bg-stone-100 object-cover"
-                                    src={`${BACKEND_BASE_URL}${attachment.downloadUrl}`}
-                                  />
-                                  <p
-                                    className="truncate px-2 py-1 text-xs text-stone-600"
-                                    title={attachment.fileName}
-                                  >
-                                    {attachment.fileName}
-                                  </p>
-                                </div>
+                                  <div className="relative overflow-hidden bg-stone-100">
+                                    <img
+                                      alt={attachment.fileName}
+                                      className="h-40 w-full object-cover transition duration-300 group-hover:scale-105"
+                                      src={`${BACKEND_BASE_URL}${attachment.downloadUrl}`}
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" />
+                                  </div>
+                                  <div className="px-3 py-2">
+                                    <p className="truncate text-sm font-medium text-stone-900">
+                                      {attachment.fileName}
+                                    </p>
+                                  </div>
+                                </button>
                               ))}
                             </div>
                           ) : (
@@ -978,6 +990,33 @@ export default function TicketPage() {
               </div>
             </Panel>
           </section>
+          {isPreviewOpen ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+              onClick={closePreview}
+            >
+              <div
+                className="relative max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[2rem] bg-stone-950"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-900 shadow-sm transition hover:bg-white"
+                >
+                  ×
+                </button>
+                <img
+                  alt={previewImageName}
+                  src={previewImageUrl}
+                  className="h-[80vh] w-full object-contain bg-black"
+                />
+                <div className="border-t border-white/10 bg-white/95 px-4 py-3 text-sm text-stone-700">
+                  {previewImageName}
+                </div>
+              </div>
+            </div>
+          ) : null}
           {isTicketModalOpen ? ticketFormModal : null}
       </div>
     </SiteFrame>
