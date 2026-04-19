@@ -29,7 +29,8 @@ public class OAuthProviderController {
 
         if (githubClientId == null
             || githubClientId.isBlank()
-            || "github-client-placeholder".equalsIgnoreCase(githubClientId)) {
+            || "github-client-placeholder".equalsIgnoreCase(githubClientId)
+            || "YOUR_GITHUB_CLIENT_ID".equalsIgnoreCase(githubClientId)) {
             return "redirect:" + frontendLoginUrl
                     + "?oauth=error&message="
                     + URLEncoder.encode(

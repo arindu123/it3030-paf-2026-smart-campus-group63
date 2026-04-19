@@ -11,6 +11,7 @@ export default function UserDashboardPage() {
       description="The user dashboard now acts as a cleaner home base for students and staff who need quick access to spaces, requests, and notifications."
       ctaHref="/Component/resources"
       ctaLabel="Browse Resources"
+      homeHeroStyle
       metrics={[
         { label: "Primary Goal", value: "Self-Service", detail: "Users should be able to find what they need without friction." },
         { label: "Path", value: "Resources First", detail: "Discover spaces, then move into bookings or issue reporting." },

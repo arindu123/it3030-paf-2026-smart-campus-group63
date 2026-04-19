@@ -140,6 +140,7 @@ export default function AdminDashboardPage() {
         return;
       }
 
+      setCurrentAdminEmail(currentUser.email || "");
       setIsAuthorized(true);
     } catch {
       window.localStorage.removeItem("smartcampusUser");
@@ -912,6 +913,20 @@ export default function AdminDashboardPage() {
                           </button>
                           <button
                             type="button"
+                            disabled={activeUserAction === user.id || !currentAdminEmail}
+                            onClick={() =>
+                              void (
+                                user.status?.toUpperCase() === "DEACTIVATED"
+                                  ? activateUser(user.id)
+                                  : deactivateUser(user.id)
+                              )
+                            }
+                            className={`rounded-full px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${user.status?.toUpperCase() === "DEACTIVATED" ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}
+                          >
+                            {user.status?.toUpperCase() === "DEACTIVATED" ? "Activate" : "Deactivate"}
+                          </button>
+                          <button
+                            type="button"
                             disabled={activeUserAction === user.id}
                             onClick={() => void deleteUser(user.id)}
                             className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -924,6 +939,9 @@ export default function AdminDashboardPage() {
                         <div className="flex flex-col gap-2">
                           <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.online ? "bg-orange-100 text-orange-800" : "bg-stone-100 text-stone-500"}`}>
                             {user.online ? "Online" : "Offline"}
+                          </span>
+                          <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.status?.toUpperCase() === "DEACTIVATED" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                            {user.status?.toUpperCase() === "DEACTIVATED" ? "Deactivated" : "Active"}
                           </span>
                           <p className="text-xs text-stone-500">
                             Last login: {formatUtcTimestamp(user.lastLoginAt)}

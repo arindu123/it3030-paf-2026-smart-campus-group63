@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,6 +27,8 @@ import java.util.NoSuchElementException;
 @RequestMapping("/api/admin")
 @CrossOrigin(origins = "*")
 public class AdminController {
+
+    private static final String ACTOR_HEADER = "X-User-Email";
 
     private final UserService userService;
 
@@ -61,6 +64,38 @@ public class AdminController {
             UserRole role = UserRole.valueOf(request.getRole().toUpperCase(Locale.ROOT));
             User updated = userService.updateUserRole(id, role);
             return ResponseEntity.ok(AdminUserDto.fromUser(updated));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        } catch (NoSuchElementException ex) {
+            return ResponseEntity.status(404).body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @PatchMapping("/users/{id}/deactivate")
+    public ResponseEntity<?> deactivateUser(@RequestHeader(ACTOR_HEADER) String actorEmail,
+                                            @PathVariable Long id) {
+        try {
+            User deactivated = userService.adminDeactivateUser(actorEmail, id);
+            return ResponseEntity.ok(Map.of(
+                "message", "User deactivated successfully",
+                "user", AdminUserDto.fromUser(deactivated)
+            ));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        } catch (NoSuchElementException ex) {
+            return ResponseEntity.status(404).body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @PatchMapping("/users/{id}/activate")
+    public ResponseEntity<?> activateUser(@RequestHeader(ACTOR_HEADER) String actorEmail,
+                                          @PathVariable Long id) {
+        try {
+            User activated = userService.adminActivateUser(actorEmail, id);
+            return ResponseEntity.ok(Map.of(
+                "message", "User activated successfully",
+                "user", AdminUserDto.fromUser(activated)
+            ));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
         } catch (NoSuchElementException ex) {
