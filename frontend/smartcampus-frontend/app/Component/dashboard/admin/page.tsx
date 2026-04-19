@@ -55,6 +55,7 @@ function formatUtcTimestamp(value?: string | null) {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [currentAdminEmail, setCurrentAdminEmail] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [resourceForm, setResourceForm] = useState<ResourceForm>(defaultResourceForm);
@@ -217,6 +218,62 @@ export default function AdminDashboardPage() {
       await loadAdminData();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Role update failed");
+    } finally {
+      setActiveUserAction(null);
+    }
+  }
+
+  async function deactivateUser(userId: number) {
+    setActiveUserAction(userId);
+    setError("");
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      setActiveUserAction(null);
+      return;
+    }
+
+    try {
+      await fetchJson(`${API_BASE_URL}/admin/users/${userId}/deactivate`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": currentAdminEmail,
+        },
+      });
+
+      setMessage(`User #${userId} deactivated.`);
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to deactivate user.");
+    } finally {
+      setActiveUserAction(null);
+    }
+  }
+
+  async function activateUser(userId: number) {
+    setActiveUserAction(userId);
+    setError("");
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      setActiveUserAction(null);
+      return;
+    }
+
+    try {
+      await fetchJson(`${API_BASE_URL}/admin/users/${userId}/activate`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": currentAdminEmail,
+        },
+      });
+
+      setMessage(`User #${userId} activated.`);
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to activate user.");
     } finally {
       setActiveUserAction(null);
     }
