@@ -12,4 +12,5 @@ public interface TicketNotificationRepository extends JpaRepository<TicketNotifi
     List<TicketNotification> findByRecipientUserIdOrderByCreatedAtDesc(Long recipientUserId);
     List<TicketNotification> findByRecipientEmailOrderByCreatedAtDesc(String recipientEmail);
     Optional<TicketNotification> findByIdAndRecipientEmail(Long id, String recipientEmail);
+    long deleteByRecipientEmail(String recipientEmail);
 }

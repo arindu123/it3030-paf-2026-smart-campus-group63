@@ -5,12 +5,26 @@ import com.sliit.smartcampus.dto.AdminCreateUserRequest;
 import com.sliit.smartcampus.dto.ChangePasswordRequest;
 import com.sliit.smartcampus.dto.ProfileUpdateRequest;
 import com.sliit.smartcampus.dto.RegisterRequest;
+import com.sliit.smartcampus.entity.Booking;
+import com.sliit.smartcampus.entity.Ticket;
+import com.sliit.smartcampus.entity.TicketComment;
 import com.sliit.smartcampus.entity.User;
 import com.sliit.smartcampus.enums.AuthProvider;
+import com.sliit.smartcampus.enums.CampusNotificationType;
 import com.sliit.smartcampus.enums.UserRole;
+import com.sliit.smartcampus.repository.BookingRepository;
+import com.sliit.smartcampus.repository.CampusNotificationRepository;
+import com.sliit.smartcampus.repository.TicketCommentRepository;
+import com.sliit.smartcampus.repository.TicketRepository;
+import com.sliit.smartcampus.repository.TicketNotificationRepository;
 import com.sliit.smartcampus.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -21,10 +35,35 @@ import java.util.Locale;
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
+    private static final String DELETED_USER_NAME = "Deleted User";
+    private static final String DELETED_USER_EMAIL = "deleted-user@smartcampus.local";
+    private static final String PROFILE_PHOTO_PATH_SEGMENT = "/api/profile/photo/";
 
-    public UserService(UserRepository userRepository) {
+    private final UserRepository userRepository;
+    private final CampusNotificationService campusNotificationService;
+    private final BookingRepository bookingRepository;
+    private final TicketRepository ticketRepository;
+    private final TicketCommentRepository ticketCommentRepository;
+    private final TicketNotificationRepository ticketNotificationRepository;
+    private final CampusNotificationRepository campusNotificationRepository;
+
+    @Value("${app.profile.photos.dir:uploads/profile-photos}")
+    private String profilePhotosDir;
+
+    public UserService(UserRepository userRepository,
+                       CampusNotificationService campusNotificationService,
+                       BookingRepository bookingRepository,
+                       TicketRepository ticketRepository,
+                       TicketCommentRepository ticketCommentRepository,
+                       TicketNotificationRepository ticketNotificationRepository,
+                       CampusNotificationRepository campusNotificationRepository) {
         this.userRepository = userRepository;
+        this.campusNotificationService = campusNotificationService;
+        this.bookingRepository = bookingRepository;
+        this.ticketRepository = ticketRepository;
+        this.ticketCommentRepository = ticketCommentRepository;
+        this.ticketNotificationRepository = ticketNotificationRepository;
+        this.campusNotificationRepository = campusNotificationRepository;
     }
 
     public User registerUser(RegisterRequest request) {
@@ -208,7 +247,23 @@ public class UserService {
     public User recordLogin(User user) {
         user.setLastLoginAt(Instant.now());
         user.setLastSeenAt(Instant.now());
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        String fullName = savedUser.getFullName() == null || savedUser.getFullName().isBlank()
+            ? "there"
+            : savedUser.getFullName();
+
+        campusNotificationService.notifyEmail(
+            savedUser.getEmail(),
+            savedUser.getRole(),
+            CampusNotificationType.WELCOME_BACK,
+            "Welcome Back",
+            "Welcome back, " + fullName + "! You have successfully logged in.",
+            "USER",
+            savedUser.getId()
+        );
+
+        return savedUser;
     }
 
     public User recordHeartbeat(String email) {
@@ -326,6 +381,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    @Transactional
     public void deleteMyProfile(String actorEmail) {
         User user = getUserByEmail(actorEmail);
 
@@ -333,7 +389,7 @@ public class UserService {
             throw new IllegalArgumentException("Cannot delete the last admin account");
         }
 
-        userRepository.delete(user);
+        deleteUserAndRelatedData(user);
     }
 
     public User updateUserRole(Long id, UserRole newRole) {
@@ -353,6 +409,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    @Transactional
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("User not found"));
@@ -361,7 +418,110 @@ public class UserService {
             throw new IllegalArgumentException("Cannot delete the last admin account");
         }
 
+        deleteUserAndRelatedData(user);
+    }
+
+    private void deleteUserAndRelatedData(User user) {
+        Long userId = user.getId();
+        String userEmail = user.getEmail();
+
+        if (userId != null) {
+            detachUserFromBookings(userId);
+            detachUserFromTickets(userId, userEmail);
+            detachUserFromTicketComments(userId);
+        }
+
+        if (userEmail != null && !userEmail.isBlank()) {
+            campusNotificationRepository.deleteByRecipientEmail(userEmail);
+            ticketNotificationRepository.deleteByRecipientEmail(userEmail);
+        }
+
+        deleteProfilePhotoFile(user.getProfilePhotoUrl());
         userRepository.delete(user);
+    }
+
+    private void detachUserFromBookings(Long userId) {
+        List<Booking> bookings = bookingRepository.findByCreatedByUser_Id(userId);
+        if (bookings.isEmpty()) {
+            return;
+        }
+
+        for (Booking booking : bookings) {
+            booking.setCreatedByUser(null);
+            booking.setCreatedBy(DELETED_USER_NAME);
+        }
+        bookingRepository.saveAll(bookings);
+    }
+
+    private void detachUserFromTickets(Long userId, String userEmail) {
+        List<Ticket> createdTickets = ticketRepository.findByCreatedByUser_IdOrderByCreatedAtDesc(userId);
+        for (Ticket ticket : createdTickets) {
+            ticket.setCreatedByUser(null);
+            ticket.setCreatedBy(DELETED_USER_EMAIL);
+        }
+
+        List<Ticket> assignedTickets = ticketRepository.findByAssignedToUser_IdOrderByCreatedAtDesc(userId);
+        for (Ticket ticket : assignedTickets) {
+            ticket.setAssignedToUser(null);
+            if (userEmail != null && userEmail.equalsIgnoreCase(ticket.getAssignedTo())) {
+                ticket.setAssignedTo(null);
+            }
+        }
+
+        if (!createdTickets.isEmpty()) {
+            ticketRepository.saveAll(createdTickets);
+        }
+        if (!assignedTickets.isEmpty()) {
+            ticketRepository.saveAll(assignedTickets);
+        }
+    }
+
+    private void detachUserFromTicketComments(Long userId) {
+        List<TicketComment> comments = ticketCommentRepository.findByOwnerUser_Id(userId);
+        if (comments.isEmpty()) {
+            return;
+        }
+
+        for (TicketComment comment : comments) {
+            comment.setOwnerUser(null);
+            comment.setOwnerEmail(DELETED_USER_EMAIL);
+        }
+        ticketCommentRepository.saveAll(comments);
+    }
+
+    private void deleteProfilePhotoFile(String profilePhotoUrl) {
+        String fileName = extractPhotoFileName(profilePhotoUrl);
+        if (fileName == null) {
+            return;
+        }
+
+        try {
+            Path root = Paths.get(profilePhotosDir).toAbsolutePath().normalize();
+            Path file = root.resolve(fileName).normalize();
+            if (file.startsWith(root)) {
+                Files.deleteIfExists(file);
+            }
+        } catch (Exception ignored) {
+            // Account deletion should not fail due to file cleanup issues.
+        }
+    }
+
+    private String extractPhotoFileName(String profilePhotoUrl) {
+        if (profilePhotoUrl == null || profilePhotoUrl.isBlank()) {
+            return null;
+        }
+
+        int markerIndex = profilePhotoUrl.indexOf(PROFILE_PHOTO_PATH_SEGMENT);
+        if (markerIndex < 0) {
+            return null;
+        }
+
+        String fileName = profilePhotoUrl.substring(markerIndex + PROFILE_PHOTO_PATH_SEGMENT.length()).trim();
+        if (fileName.isBlank() || fileName.contains("/") || fileName.contains("\\")) {
+            return null;
+        }
+
+        return fileName;
     }
 
     private boolean isDeactivated(User user) {

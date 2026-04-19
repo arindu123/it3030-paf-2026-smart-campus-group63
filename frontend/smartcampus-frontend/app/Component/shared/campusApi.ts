@@ -56,6 +56,7 @@ export type TicketNotification = {
 };
 
 export const campusNotificationTypes = [
+  "WELCOME_BACK",
   "BOOKING_REQUEST_SUBMITTED",
   "BOOKING_APPROVED",
   "BOOKING_REJECTED",
