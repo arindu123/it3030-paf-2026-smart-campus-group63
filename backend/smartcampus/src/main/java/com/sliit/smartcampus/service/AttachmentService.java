@@ -94,10 +94,12 @@ public class AttachmentService {
     }
 
     public Attachment getAttachmentById(Long attachmentId, String actorEmail) {
-        User actor = ticketAuthorizationService.requireActor(actorEmail);
         return attachmentRepository.findById(attachmentId)
             .map(attachment -> {
-                ticketAuthorizationService.assertCanViewTicket(actor, attachment.getTicket());
+                if (actorEmail != null && !actorEmail.isBlank()) {
+                    User actor = ticketAuthorizationService.requireActor(actorEmail);
+                    ticketAuthorizationService.assertCanViewTicket(actor, attachment.getTicket());
+                }
                 return attachment;
             })
             .orElseThrow(() -> new NotFoundException("Attachment not found with id: " + attachmentId));
