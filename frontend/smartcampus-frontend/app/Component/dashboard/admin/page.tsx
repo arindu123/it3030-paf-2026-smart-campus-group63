@@ -52,6 +52,85 @@ function formatUtcTimestamp(value?: string | null) {
   return `${date.toISOString().replace("T", " ").slice(0, 19)} UTC`;
 }
 
+function mapResourceToForm(resource: Resource): ResourceForm {
+  return {
+    name: resource.name,
+    type: resource.type,
+    capacity: String(resource.capacity),
+    location: resource.location,
+    description: resource.description,
+    availableFrom: resource.availableFrom,
+    availableTo: resource.availableTo,
+    status: resource.status,
+  };
+}
+
+function validateResourceForm(resourceForm: ResourceForm): string | null {
+  const name = resourceForm.name.trim();
+  const location = resourceForm.location.trim();
+  const description = resourceForm.description.trim();
+  const capacity = Number(resourceForm.capacity);
+
+  if (!name) {
+    return "Resource name is required.";
+  }
+  if (name.length < 3) {
+    return "Resource name must be at least 3 characters long.";
+  }
+  if (name.length > 100) {
+    return "Resource name must be 100 characters or fewer.";
+  }
+  if (!resourceForm.type) {
+    return "Resource type is required.";
+  }
+  if (!resourceForm.capacity.trim()) {
+    return "Capacity is required.";
+  }
+  if (!Number.isInteger(capacity) || capacity <= 0) {
+    return "Capacity must be a whole number greater than 0.";
+  }
+  if (capacity > 1000) {
+    return "Capacity must be 1000 or fewer.";
+  }
+  if (!location) {
+    return "Location is required.";
+  }
+  if (location.length > 100) {
+    return "Location must be 100 characters or fewer.";
+  }
+  if (!description) {
+    return "Description is required.";
+  }
+  if (description.length > 500) {
+    return "Description must be 500 characters or fewer.";
+  }
+  if (!resourceForm.availableFrom || !resourceForm.availableTo) {
+    return "Available from and available to times are required.";
+  }
+  if (resourceForm.availableFrom >= resourceForm.availableTo) {
+    return "Available from time must be earlier than available to time.";
+  }
+  if (!resourceForm.status) {
+    return "Resource status is required.";
+  }
+
+  return null;
+}
+
+function buildResourcePayload(resourceForm: ResourceForm) {
+  return {
+    ...resourceForm,
+    name: resourceForm.name.trim(),
+    capacity: Number(resourceForm.capacity),
+    location: resourceForm.location.trim(),
+    description: resourceForm.description.trim(),
+  };
+}
+
+function sanitizeCapacityInput(value: string) {
+  return value.replace(/[^\d]/g, "");
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -62,6 +141,8 @@ export default function AdminDashboardPage() {
   const [roleEdits, setRoleEdits] = useState<Record<number, UserRole>>({});
   const [activeUserAction, setActiveUserAction] = useState<number | null>(null);
   const [activeResourceAction, setActiveResourceAction] = useState<number | null>(null);
+  const [editingResourceId, setEditingResourceId] = useState<number | null>(null);
+  const [resourceEdits, setResourceEdits] = useState<Record<number, ResourceForm>>({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Loading admin data...");
   const [error, setError] = useState("");
@@ -71,18 +152,11 @@ export default function AdminDashboardPage() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPhoneNumber, setNewUserPhoneNumber] = useState("");
   const [newUserDepartment, setNewUserDepartment] = useState("");
-  const [newUserRole, setNewUserRole] = useState<UserRole>("USER");
+  const [newUserRole, setNewUserRole] = useState<UserRole>("TECHNICIAN");
   const [newUserProvider, setNewUserProvider] = useState<"LOCAL" | "GOOGLE">("GOOGLE");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserConfirmPassword, setNewUserConfirmPassword] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [activeBookingAction, setActiveBookingAction] = useState<number | null>(null);
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [approvingBookingId, setApprovingBookingId] = useState<number | null>(null);
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -106,6 +180,12 @@ export default function AdminDashboardPage() {
 
       setUsers(normalizedUsers);
       setResources(resourceData);
+      setResourceEdits((current) =>
+        resourceData.reduce<Record<number, ResourceForm>>((accumulator, resource) => {
+          accumulator[resource.id] = current[resource.id] ?? mapResourceToForm(resource);
+          return accumulator;
+        }, {})
+      );
       setBookings(bookingData);
       setRoleEdits(
         normalizedUsers.reduce<Record<number, UserRole>>((accumulator, user) => {
@@ -304,9 +384,61 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function createUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreatingUser(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: newUserFullName,
+          email: newUserEmail,
+          phoneNumber: newUserPhoneNumber,
+          department: newUserDepartment,
+          role: newUserRole,
+          provider: newUserProvider,
+          password: newUserPassword,
+          confirmPassword: newUserConfirmPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ message: "User create failed" }));
+        throw new Error(body.message || "User create failed");
+      }
+
+      setNewUserFullName("");
+      setNewUserEmail("");
+      setNewUserPhoneNumber("");
+      setNewUserDepartment("");
+      setNewUserRole("TECHNICIAN");
+      setNewUserProvider("GOOGLE");
+      setNewUserPassword("");
+      setNewUserConfirmPassword("");
+      setMessage("User account created successfully.");
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "User create failed");
+    } finally {
+      setCreatingUser(false);
+    }
+  }
+
   async function createResource(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    const validationError = validateResourceForm(resourceForm);
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     try {
       await fetchJson<Resource>(`${API_BASE_URL}/resources`, {
@@ -314,10 +446,7 @@ export default function AdminDashboardPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...resourceForm,
-          capacity: Number(resourceForm.capacity),
-        }),
+        body: JSON.stringify(buildResourcePayload(resourceForm)),
       });
 
       setResourceForm(defaultResourceForm);
@@ -368,155 +497,39 @@ export default function AdminDashboardPage() {
     }
   }
 
-  async function createUser(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
+  async function saveResource(resourceId: number) {
+    const resourceDraft = resourceEdits[resourceId];
 
-    if (newUserProvider === "LOCAL" && newUserPassword !== newUserConfirmPassword) {
-      setError("Passwords do not match.");
+    if (!resourceDraft) {
       return;
     }
 
-    if (newUserProvider === "LOCAL" && !newUserPassword) {
-      setError("Password is required for local accounts.");
+    const validationError = validateResourceForm(resourceDraft);
+
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    setCreatingUser(true);
-
-    try {
-      await fetchJson<AdminUser>(`${API_BASE_URL}/admin/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName: newUserFullName,
-          email: newUserEmail,
-          phoneNumber: newUserPhoneNumber,
-          department: newUserDepartment,
-          role: newUserRole,
-          provider: newUserProvider,
-          password: newUserProvider === "LOCAL" ? newUserPassword : undefined,
-        }),
-      });
-
-      setNewUserFullName("");
-      setNewUserEmail("");
-      setNewUserPhoneNumber("");
-      setNewUserDepartment("");
-      setNewUserRole("USER");
-      setNewUserProvider("GOOGLE");
-      setNewUserPassword("");
-      setNewUserConfirmPassword("");
-      setMessage("User account created successfully.");
-      await loadAdminData();
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Failed to create user account.");
-    } finally {
-      setCreatingUser(false);
-    }
-  }
-
-  function openApproveModal(bookingId: number) {
-    setApprovingBookingId(bookingId);
-    setIsApproveModalOpen(true);
-  }
-
-  function closeApproveModal() {
-    setIsApproveModalOpen(false);
-    setApprovingBookingId(null);
-  }
-
-  async function submitApproveBooking() {
-    if (!approvingBookingId) {
-      return;
-    }
-
-    setActiveBookingAction(approvingBookingId);
+    setActiveResourceAction(resourceId);
     setError("");
 
     try {
-      const adminEmail = window.localStorage.getItem("smartcampusUser") 
-        ? (JSON.parse(window.localStorage.getItem("smartcampusUser") as string) as { email?: string }).email 
-        : "";
-
-      if (!adminEmail) {
-        setError("Admin email not found. Please log in again.");
-        setActiveBookingAction(null);
-        return;
-      }
-
-      await fetchJson(`${API_BASE_URL}/bookings/${approvingBookingId}/approve`, {
-        method: "PATCH",
+      await fetchJson<Resource>(`${API_BASE_URL}/resources/${resourceId}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-User-Email": adminEmail,
         },
+        body: JSON.stringify(buildResourcePayload(resourceDraft)),
       });
 
-      setMessage(`Booking #${approvingBookingId} approved.`);
-      closeApproveModal();
+      setEditingResourceId(null);
+      setMessage(`Resource #${resourceId} updated successfully.`);
       await loadAdminData();
-    } catch (approveError) {
-      setError(approveError instanceof Error ? approveError.message : "Failed to approve booking.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save resource.");
     } finally {
-      setActiveBookingAction(null);
-    }
-  }
-
-  function openRejectModal(bookingId: number) {
-    setRejectingBookingId(bookingId);
-    setRejectionReason("");
-    setIsRejectModalOpen(true);
-  }
-
-  function closeRejectModal() {
-    setIsRejectModalOpen(false);
-    setRejectingBookingId(null);
-    setRejectionReason("");
-  }
-
-  async function submitRejectBooking() {
-    if (!rejectingBookingId) {
-      return;
-    }
-
-    if (!rejectionReason.trim()) {
-      setError("Please provide a rejection reason.");
-      return;
-    }
-
-    setActiveBookingAction(rejectingBookingId);
-    setError("");
-
-    try {
-      const adminEmail = window.localStorage.getItem("smartcampusUser") 
-        ? (JSON.parse(window.localStorage.getItem("smartcampusUser") as string) as { email?: string }).email 
-        : "";
-
-      if (!adminEmail) {
-        setError("Admin email not found. Please log in again.");
-        setActiveBookingAction(null);
-        return;
-      }
-
-      await fetchJson(`${API_BASE_URL}/bookings/${rejectingBookingId}/reject`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-User-Email": adminEmail,
-        },
-        body: JSON.stringify({ reason: rejectionReason }),
-      });
-
-      setMessage(`Booking #${rejectingBookingId} rejected.`);
-      closeRejectModal();
-      await loadAdminData();
-    } catch (rejectError) {
-      setError(rejectError instanceof Error ? rejectError.message : "Failed to reject booking.");
-    } finally {
-      setActiveBookingAction(null);
+      setActiveResourceAction(null);
     }
   }
 
@@ -613,7 +626,9 @@ export default function AdminDashboardPage() {
                 />
                 <Field
                   label="Capacity"
-                  onChange={(value) => setResourceForm((current) => ({ ...current, capacity: value }))}
+                  onChange={(value) =>
+                    setResourceForm((current) => ({ ...current, capacity: sanitizeCapacityInput(value) }))
+                  }
                   placeholder="40"
                   type="number"
                   value={resourceForm.capacity}
@@ -638,12 +653,14 @@ export default function AdminDashboardPage() {
                 <Field
                   label="Available From"
                   onChange={(value) => setResourceForm((current) => ({ ...current, availableFrom: value }))}
+                  max={resourceForm.availableTo}
                   type="time"
                   value={resourceForm.availableFrom}
                 />
                 <Field
                   label="Available To"
                   onChange={(value) => setResourceForm((current) => ({ ...current, availableTo: value }))}
+                  min={resourceForm.availableFrom}
                   type="time"
                   value={resourceForm.availableTo}
                 />
@@ -681,29 +698,180 @@ export default function AdminDashboardPage() {
                     key={resource.id}
                     className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-xl font-semibold text-stone-950">{resource.name}</h3>
-                        <p className="mt-2 text-sm leading-6 text-stone-600">{resource.description}</p>
-                      </div>
-                      <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
-                        {resource.status}
-                      </span>
-                    </div>
+                    {editingResourceId === resource.id ? (
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="text-xl font-semibold text-stone-950">Edit Resource</h3>
+                          <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
+                            {resourceEdits[resource.id]?.status ?? resource.status}
+                          </span>
+                        </div>
 
-                    <div className="mt-4 grid gap-2 text-sm text-stone-600">
-                      <p>Type: {resource.type}</p>
-                      <p>Capacity: {resource.capacity}</p>
-                      <p>Location: {resource.location}</p>
-                      <p>
-                        Available: {resource.availableFrom} - {resource.availableTo}
-                      </p>
-                    </div>
+                        <Field
+                          label="Resource Name"
+                          onChange={(value) =>
+                            setResourceEdits((current) => ({
+                              ...current,
+                              [resource.id]: { ...current[resource.id], name: value },
+                            }))
+                          }
+                          value={resourceEdits[resource.id]?.name ?? resource.name}
+                        />
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <SelectField
+                            label="Type"
+                            onChange={(value) =>
+                              setResourceEdits((current) => ({
+                                ...current,
+                                [resource.id]: { ...current[resource.id], type: value },
+                              }))
+                            }
+                            options={resourceTypes}
+                            value={resourceEdits[resource.id]?.type ?? resource.type}
+                          />
+                          <Field
+                            label="Capacity"
+                            onChange={(value) =>
+                              setResourceEdits((current) => ({
+                                ...current,
+                                [resource.id]: { ...current[resource.id], capacity: sanitizeCapacityInput(value) },
+                              }))
+                            }
+                            type="number"
+                            value={resourceEdits[resource.id]?.capacity ?? String(resource.capacity)}
+                          />
+                        </div>
+
+                        <Field
+                          label="Location"
+                          onChange={(value) =>
+                            setResourceEdits((current) => ({
+                              ...current,
+                              [resource.id]: { ...current[resource.id], location: value },
+                            }))
+                          }
+                          value={resourceEdits[resource.id]?.location ?? resource.location}
+                        />
+
+                        <TextAreaField
+                          label="Description"
+                          onChange={(value) =>
+                            setResourceEdits((current) => ({
+                              ...current,
+                              [resource.id]: { ...current[resource.id], description: value },
+                            }))
+                          }
+                          value={resourceEdits[resource.id]?.description ?? resource.description}
+                        />
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field
+                            label="Available From"
+                            onChange={(value) =>
+                              setResourceEdits((current) => ({
+                                ...current,
+                                [resource.id]: { ...current[resource.id], availableFrom: value },
+                              }))
+                            }
+                            max={resourceEdits[resource.id]?.availableTo ?? resource.availableTo}
+                            type="time"
+                            value={resourceEdits[resource.id]?.availableFrom ?? resource.availableFrom}
+                          />
+                          <Field
+                            label="Available To"
+                            onChange={(value) =>
+                              setResourceEdits((current) => ({
+                                ...current,
+                                [resource.id]: { ...current[resource.id], availableTo: value },
+                              }))
+                            }
+                            min={resourceEdits[resource.id]?.availableFrom ?? resource.availableFrom}
+                            type="time"
+                            value={resourceEdits[resource.id]?.availableTo ?? resource.availableTo}
+                          />
+                        </div>
+
+                        <SelectField
+                          label="Status"
+                          onChange={(value) =>
+                            setResourceEdits((current) => ({
+                              ...current,
+                              [resource.id]: { ...current[resource.id], status: value },
+                            }))
+                          }
+                          options={resourceStatuses}
+                          value={resourceEdits[resource.id]?.status ?? resource.status}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-xl font-semibold text-stone-950">{resource.name}</h3>
+                            <p className="mt-2 text-sm leading-6 text-stone-600">{resource.description}</p>
+                          </div>
+                          <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
+                            {resource.status}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 grid gap-2 text-sm text-stone-600">
+                          <p>Type: {resource.type}</p>
+                          <p>Capacity: {resource.capacity}</p>
+                          <p>Location: {resource.location}</p>
+                          <p>
+                            Available: {resource.availableFrom} - {resource.availableTo}
+                          </p>
+                        </div>
+                      </>
+                    )}
 
                     <div className="mt-5 flex flex-wrap gap-3">
+                      {editingResourceId === resource.id ? (
+                        <>
+                          <button
+                            className="rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-4 py-2 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={activeResourceAction === resource.id}
+                            onClick={() => void saveResource(resource.id)}
+                            type="button"
+                          >
+                            Save
+                          </button>
+                          <button
+                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={activeResourceAction === resource.id}
+                            onClick={() => {
+                              setResourceEdits((current) => ({
+                                ...current,
+                                [resource.id]: mapResourceToForm(resource),
+                              }));
+                              setEditingResourceId(null);
+                            }}
+                            type="button"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={activeResourceAction === resource.id}
+                          onClick={() => {
+                            setResourceEdits((current) => ({
+                              ...current,
+                              [resource.id]: mapResourceToForm(resource),
+                            }));
+                            setEditingResourceId(resource.id);
+                          }}
+                          type="button"
+                        >
+                          Edit
+                        </button>
+                      )}
                       <button
                         className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={activeResourceAction === resource.id}
+                        disabled={activeResourceAction === resource.id || editingResourceId === resource.id}
                         onClick={() => void updateResourceStatus(resource.id, "ACTIVE")}
                         type="button"
                       >
@@ -711,7 +879,7 @@ export default function AdminDashboardPage() {
                       </button>
                       <button
                         className="rounded-full bg-stone-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-600 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={activeResourceAction === resource.id}
+                        disabled={activeResourceAction === resource.id || editingResourceId === resource.id}
                         onClick={() => void updateResourceStatus(resource.id, "OUT_OF_SERVICE")}
                         type="button"
                       >
@@ -719,7 +887,7 @@ export default function AdminDashboardPage() {
                       </button>
                       <button
                         className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={activeResourceAction === resource.id}
+                        disabled={activeResourceAction === resource.id || editingResourceId === resource.id}
                         onClick={() => void deleteResource(resource.id)}
                         type="button"
                       >

@@ -118,18 +118,24 @@ export function Field({
   onChange,
   placeholder,
   type = "text",
+  min,
+  max,
 }: Readonly<{
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   type?: string;
+  min?: string;
+  max?: string;
 }>) {
   return (
     <label className="grid gap-2 text-sm font-medium text-stone-700">
       {label}
       <input
         className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+        max={max}
+        min={min}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         type={type}
