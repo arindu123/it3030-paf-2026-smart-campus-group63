@@ -19,7 +19,7 @@ public class BookingServiceImpl implements BookingService {
     private final ResourceRepository resourceRepository;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
-                             ResourceRepository resourceRepository) {
+                              ResourceRepository resourceRepository) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
     }
@@ -27,8 +27,7 @@ public class BookingServiceImpl implements BookingService {
     private BookingResponse convertToResponse(Booking booking) {
         return new BookingResponse(
                 booking.getId(),
-                booking.getResource().getId(),
-                booking.getResource().getName(),
+                booking.getResource() != null ? booking.getResource().getName() : null,
                 booking.getDate(),
                 booking.getStartTime(),
                 booking.getEndTime(),
@@ -40,8 +39,13 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
-        Resource resource = resourceRepository.findById(request.getResourceId())
-                .orElseThrow(() -> new RuntimeException("Resource not found with id: " + request.getResourceId()));
+        String resourceName = request.getResourceName() == null ? "" : request.getResourceName().trim();
+        if (resourceName.isEmpty()) {
+            throw new RuntimeException("Resource name is required");
+        }
+
+        Resource resource = resourceRepository.findFirstByNameIgnoreCase(resourceName)
+                .orElseThrow(() -> new RuntimeException("Resource not found: " + resourceName));
 
         Booking booking = new Booking();
         booking.setResource(resource);

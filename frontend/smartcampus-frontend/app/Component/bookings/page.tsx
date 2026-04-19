@@ -85,7 +85,7 @@ export default function BookingsPage() {
           >
             <div className="space-y-4">
               {bookings.length === 0 ? (
-                <EmptyState text="No bookings yet. Book a resource from the Resources page." />
+                <EmptyState text="No bookings yet." />
               ) : (
                 bookings.map((booking) => (
                   <article
@@ -95,7 +95,7 @@ export default function BookingsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="text-xl font-semibold text-stone-950">
-                          {booking.resourceName || `Resource #${booking.resourceId}`}
+                          {booking.resourceName || "Resource Booking"}
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-stone-600">
                           {booking.purpose}

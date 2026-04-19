@@ -6,7 +6,6 @@ import java.time.LocalTime;
 public class BookingResponse {
 
     private Long id;
-    private Long resourceId;
     private String resourceName;
     private LocalDate date;
     private LocalTime startTime;
@@ -17,11 +16,10 @@ public class BookingResponse {
 
     public BookingResponse() {}
 
-    public BookingResponse(Long id, Long resourceId, String resourceName, LocalDate date,
+    public BookingResponse(Long id, String resourceName, LocalDate date,
                           LocalTime startTime, LocalTime endTime, String purpose,
                           Integer expectedAttendees, String status) {
         this.id = id;
-        this.resourceId = resourceId;
         this.resourceName = resourceName;
         this.date = date;
         this.startTime = startTime;
@@ -37,14 +35,6 @@ public class BookingResponse {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Long getResourceId() {
-        return resourceId;
-    }
-
-    public void setResourceId(Long resourceId) {
-        this.resourceId = resourceId;
     }
 
     public String getResourceName() {

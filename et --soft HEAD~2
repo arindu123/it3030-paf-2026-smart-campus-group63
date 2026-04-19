@@ -1,0 +1,42 @@
+[33m0f6e357[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mkavishka[m[33m)[m Remove hardcoded OAuth client credentials and replace with environment variables
+[33m6ccc6cc[m Refactor booking system to use resource names instead of IDs
+[33m53f7a83[m[33m ([m[1;31morigin/kavishka[m[33m)[m change layout page
+[33mc414875[m Merge remote-tracking branch 'origin/main' into kavishka
+[33m4eb902d[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #10 from arindu123/user_management
+[33m8c3febe[m Merge branch 'main' into user_management
+[33m19f7668[m update UI home page
+[33m86d1571[m Merge pull request #9 from arindu123/semal
+[33m641a1e8[m Member 1 implementation
+[33m8eba0ed[m after changing database to mysql
+[33mc130541[m[33m ([m[1;31morigin/semal[m[33m)[m Refactor ticket management system
+[33mc204df9[m Merge pull request #8 from arindu123/semal
+[33meebd0d3[m Merge remote-tracking branch 'origin/main' into semal
+[33m27f0fcc[m change db to mysql
+[33m3e96425[m Merge pull request #7 from arindu123/user_management
+[33m9ba8a23[m add admin side with user management
+[33mc753812[m Merge pull request #6 from arindu123/semal
+[33m96209b5[m Update smartcampusdb database file with latest changes
+[33meef0282[m Update .gitignore to include local secrets and helper scripts; modify application.properties for Google OAuth configuration; add run-backend script for local development
+[33m2ccba59[m Merge pull request #5 from arindu123/semal
+[33m4994117[m Add Google OAuth2 fallback controller and update backend port in configurations
+[33m59159a6[m Refactor SecurityConfig to use ObjectProvider for ClientRegistrationRepository and update application.properties for server port and OAuth2 configuration instructions
+[33m8275d12[m Add Google OAuth2 client support using environment-based configuration
+[33m9ca281f[m Implement Google OAuth2 authentication flow; add success and failure handlers, update User entity for provider details, and enhance UserService for Google account management.
+[33m1a348b3[m Merge remote-tracking branch 'origin/main' into semal
+[33m4ee369f[m Merge pull request #4 from arindu123/dewindi_new
+[33m25c8218[m Merge pull request #3 from arindu123/booking_workflow_new
+[33m6cd02a2[m Refactor dashboard pages to use RoleDashboard component for improved structure and clarity; enhance Notifications and Profile pages with new layouts and metrics; update Resources page styling; introduce SiteFrame and RoleDashboard components for consistent design; apply global CSS updates for better aesthetics and usability.
+[33m212f28a[m[33m ([m[1;31morigin/dewindi_new[m[33m)[m Google Auth
+[33m762bf1d[m Implement booking management feature with API integration and UI components
+[33mbea848b[m Merge pull request #1 from arindu123/semal
+[33m2e54bf4[m Refactor Ticket, Profile, and Resources components; extract shared UI components and API functions
+[33m80918b9[m Merge remote-tracking branch 'origin/main' into semal
+[33m156fee5[m Refactor code structure for improved readability and maintainability
+[33mef2ecd6[m Merge pull request #2 from arindu123/dewindi_new
+[33m266cf8d[m new paf structure
+[33m7412a18[m fix: add suppressHydrationWarning to layout and page components
+[33m9479cbb[m test part
+[33m6cdb464[m Add smart campus project
+[33m4ac6df5[m feat: initialize smartcampus-frontend with Next.js and Tailwind CSS
+[33m88eaaf2[m ticket module
+[33mf7c96ba[m chore: initial project structure

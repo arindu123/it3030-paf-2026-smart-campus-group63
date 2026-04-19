@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { API_BASE_URL, AdminUser, UserRole, userRoles } from "../../shared/campusApi";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  API_BASE_URL,
+  AdminUser,
+  defaultResourceForm,
+  fetchJson,
+  Resource,
+  ResourceForm,
+  resourceStatuses,
+  resourceTypes,
+  UserRole,
+  userRoles,
+} from "../../shared/campusApi";
+import { Field, Panel, SelectField, TextAreaField } from "../../shared/CampusUi";
 import { GlassPanel, MetricTile, PageHero, SiteFrame } from "../../shared/SiteFrame";
 
 type StoredUser = {
@@ -43,8 +55,11 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [resourceForm, setResourceForm] = useState<ResourceForm>(defaultResourceForm);
   const [roleEdits, setRoleEdits] = useState<Record<number, UserRole>>({});
   const [activeUserAction, setActiveUserAction] = useState<number | null>(null);
+  const [activeResourceAction, setActiveResourceAction] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Loading admin data...");
   const [error, setError] = useState("");
@@ -60,9 +75,10 @@ export default function AdminDashboardPage() {
     }
 
     try {
-      const usersData = await fetch(`${API_BASE_URL}/admin/users`).then((response) =>
-        response.json() as Promise<AdminUser[]>
-      );
+      const [usersData, resourceData] = await Promise.all([
+        fetch(`${API_BASE_URL}/admin/users`).then((response) => response.json() as Promise<AdminUser[]>),
+        fetchJson<Resource[]>(`${API_BASE_URL}/resources`),
+      ]);
 
       const normalizedUsers = usersData.map((user) => ({
         ...user,
@@ -70,6 +86,7 @@ export default function AdminDashboardPage() {
       }));
 
       setUsers(normalizedUsers);
+      setResources(resourceData);
       setRoleEdits(
         normalizedUsers.reduce<Record<number, UserRole>>((accumulator, user) => {
           accumulator[user.id] = user.role;
@@ -79,11 +96,11 @@ export default function AdminDashboardPage() {
       setLastUpdatedAt(new Date().toLocaleTimeString());
 
       if (!silent) {
-        setMessage("Registered users loaded successfully.");
+        setMessage("Admin dashboard synced with users and resources.");
       }
     } catch {
       if (!silent) {
-        setError("Unable to load registered users. Check backend connection.");
+        setError("Unable to load admin dashboard data. Check backend connection.");
       }
     } finally {
       setLoading(false);
@@ -132,13 +149,15 @@ export default function AdminDashboardPage() {
     const adminCount = users.filter((user) => user.role === "ADMIN").length;
     const technicianCount = users.filter((user) => user.role === "TECHNICIAN").length;
     const onlineCount = users.filter((user) => user.online).length;
+    const activeResourceCount = resources.filter((resource) => resource.status === "ACTIVE").length;
 
     return {
+      activeResourceCount,
       adminCount,
       technicianCount,
       onlineCount,
     };
-  }, [users]);
+  }, [resources, users]);
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -206,6 +225,70 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function createResource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    try {
+      await fetchJson<Resource>(`${API_BASE_URL}/resources`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...resourceForm,
+          capacity: Number(resourceForm.capacity),
+        }),
+      });
+
+      setResourceForm(defaultResourceForm);
+      setMessage("Resource created successfully.");
+      await loadAdminData();
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Failed to create resource.");
+    }
+  }
+
+  async function updateResourceStatus(resourceId: number, status: string) {
+    setActiveResourceAction(resourceId);
+    setError("");
+
+    try {
+      await fetchJson<Resource>(`${API_BASE_URL}/resources/${resourceId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      setMessage(`Resource #${resourceId} updated to ${status}.`);
+      await loadAdminData();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Failed to update resource status.");
+    } finally {
+      setActiveResourceAction(null);
+    }
+  }
+
+  async function deleteResource(resourceId: number) {
+    setActiveResourceAction(resourceId);
+    setError("");
+
+    try {
+      await fetchJson<string>(`${API_BASE_URL}/resources/${resourceId}`, {
+        method: "DELETE",
+      });
+
+      setMessage(`Resource #${resourceId} deleted.`);
+      await loadAdminData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete resource.");
+    } finally {
+      setActiveResourceAction(null);
+    }
+  }
+
   return (
     <SiteFrame accent="sky">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
@@ -243,7 +326,7 @@ export default function AdminDashboardPage() {
           }
         />
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <MetricTile
             label="Total Users"
             value={String(users.length)}
@@ -264,6 +347,154 @@ export default function AdminDashboardPage() {
             value={String(overview.onlineCount)}
             detail="Users active within the last 2 minutes"
           />
+          <MetricTile
+            label="Active Resources"
+            value={String(overview.activeResourceCount)}
+            detail="Resources currently available to campus users"
+          />
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <Panel
+            eyebrow="Resource Form"
+            title="Register a campus resource"
+            description="Create and manage resource availability directly from the admin dashboard."
+          >
+            <form className="grid gap-4" onSubmit={createResource}>
+              <Field
+                label="Resource Name"
+                onChange={(value) => setResourceForm((current) => ({ ...current, name: value }))}
+                placeholder="Computer Lab A"
+                value={resourceForm.name}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <SelectField
+                  label="Type"
+                  onChange={(value) => setResourceForm((current) => ({ ...current, type: value }))}
+                  options={resourceTypes}
+                  value={resourceForm.type}
+                />
+                <Field
+                  label="Capacity"
+                  onChange={(value) => setResourceForm((current) => ({ ...current, capacity: value }))}
+                  placeholder="40"
+                  type="number"
+                  value={resourceForm.capacity}
+                />
+              </div>
+
+              <Field
+                label="Location"
+                onChange={(value) => setResourceForm((current) => ({ ...current, location: value }))}
+                placeholder="Block A"
+                value={resourceForm.location}
+              />
+
+              <TextAreaField
+                label="Description"
+                onChange={(value) => setResourceForm((current) => ({ ...current, description: value }))}
+                placeholder="Main programming lab"
+                value={resourceForm.description}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label="Available From"
+                  onChange={(value) => setResourceForm((current) => ({ ...current, availableFrom: value }))}
+                  type="time"
+                  value={resourceForm.availableFrom}
+                />
+                <Field
+                  label="Available To"
+                  onChange={(value) => setResourceForm((current) => ({ ...current, availableTo: value }))}
+                  type="time"
+                  value={resourceForm.availableTo}
+                />
+              </div>
+
+              <SelectField
+                label="Status"
+                onChange={(value) => setResourceForm((current) => ({ ...current, status: value }))}
+                options={resourceStatuses}
+                value={resourceForm.status}
+              />
+
+              <button
+                className="mt-2 rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105"
+                type="submit"
+              >
+                Save Resource
+              </button>
+            </form>
+          </Panel>
+
+          <Panel
+            eyebrow="Resources"
+            title="Resource management"
+            description="Update status or remove resources without leaving the dashboard."
+          >
+            <div className="space-y-4">
+              {resources.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-8 text-center text-sm text-stone-500">
+                  No resources yet. Create one from the form on this page.
+                </div>
+              ) : (
+                resources.map((resource) => (
+                  <article
+                    key={resource.id}
+                    className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-semibold text-stone-950">{resource.name}</h3>
+                        <p className="mt-2 text-sm leading-6 text-stone-600">{resource.description}</p>
+                      </div>
+                      <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
+                        {resource.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-sm text-stone-600">
+                      <p>Type: {resource.type}</p>
+                      <p>Capacity: {resource.capacity}</p>
+                      <p>Location: {resource.location}</p>
+                      <p>
+                        Available: {resource.availableFrom} - {resource.availableTo}
+                      </p>
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <button
+                        className="rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={activeResourceAction === resource.id}
+                        onClick={() => void updateResourceStatus(resource.id, "ACTIVE")}
+                        type="button"
+                      >
+                        Set Active
+                      </button>
+                      <button
+                        className="rounded-full bg-stone-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={activeResourceAction === resource.id}
+                        onClick={() => void updateResourceStatus(resource.id, "OUT_OF_SERVICE")}
+                        type="button"
+                      >
+                        Set Out of Service
+                      </button>
+                      <button
+                        className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={activeResourceAction === resource.id}
+                        onClick={() => void deleteResource(resource.id)}
+                        type="button"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </Panel>
         </section>
 
         <section className="grid gap-6">
