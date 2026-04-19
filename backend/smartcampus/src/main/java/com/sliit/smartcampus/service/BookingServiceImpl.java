@@ -65,6 +65,20 @@ public class BookingServiceImpl implements BookingService {
         Resource resource = resourceRepository.findFirstByNameIgnoreCase(resourceName)
                 .orElseThrow(() -> new RuntimeException("Resource not found: " + resourceName));
 
+        // Check for time slot conflicts with approved bookings
+        List<Booking> conflictingBookings = bookingRepository.findConflictingBookings(
+                resource.getId(),
+                request.getDate(),
+                request.getStartTime(),
+                request.getEndTime(),
+                BookingStatus.APPROVED
+        );
+
+        if (!conflictingBookings.isEmpty()) {
+            throw new RuntimeException("Time slot is already booked for this resource on the selected date. " +
+                    "Please choose a different time or date.");
+        }
+
         Booking booking = new Booking();
         booking.setResource(resource);
         booking.setDate(request.getDate());
