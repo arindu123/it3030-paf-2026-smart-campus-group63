@@ -53,24 +53,51 @@ if ([string]::IsNullOrWhiteSpace($DbUsername)) {
 if ([string]::IsNullOrWhiteSpace($DbPassword)) {
     $DbPassword = "StrongPass123!"
 }
-if ([string]::IsNullOrWhiteSpace($GithubClientId)) {
-    $GithubClientId = "github-client-placeholder"
+
+$githubIdPlaceholder = @("github-client-placeholder", "YOUR_GITHUB_CLIENT_ID")
+$githubSecretPlaceholder = @("github-secret-placeholder", "YOUR_GITHUB_CLIENT_SECRET")
+if (-not [string]::IsNullOrWhiteSpace($GithubClientId) -and $githubIdPlaceholder -contains $GithubClientId) {
+    $GithubClientId = $null
 }
-if ([string]::IsNullOrWhiteSpace($GithubClientSecret)) {
-    $GithubClientSecret = "github-secret-placeholder"
+if (-not [string]::IsNullOrWhiteSpace($GithubClientSecret) -and $githubSecretPlaceholder -contains $GithubClientSecret) {
+    $GithubClientSecret = $null
 }
 
 $env:DB_URL = $DbUrl
 $env:DB_USERNAME = $DbUsername
 $env:DB_PASSWORD = $DbPassword
+$env:SPRING_DATASOURCE_URL = $DbUrl
+$env:SPRING_DATASOURCE_USERNAME = $DbUsername
+$env:SPRING_DATASOURCE_PASSWORD = $DbPassword
 
 Write-Host "Starting Smart Campus backend on port $Port using profile '$Profile'..."
 Write-Host "Database URL: $DbUrl"
 Write-Host "Database user: $DbUsername"
 $env:SERVER_PORT = "$Port"
 $env:SPRING_PROFILES_ACTIVE = $Profile
-$env:GOOGLE_CLIENT_ID = $GoogleClientId
-$env:GOOGLE_CLIENT_SECRET = $GoogleClientSecret
-$env:GITHUB_CLIENT_ID = $GithubClientId
-$env:GITHUB_CLIENT_SECRET = $GithubClientSecret
+
+if ([string]::IsNullOrWhiteSpace($GoogleClientId)) {
+    Remove-Item Env:GOOGLE_CLIENT_ID -ErrorAction SilentlyContinue
+} else {
+    $env:GOOGLE_CLIENT_ID = $GoogleClientId
+}
+
+if ([string]::IsNullOrWhiteSpace($GoogleClientSecret)) {
+    Remove-Item Env:GOOGLE_CLIENT_SECRET -ErrorAction SilentlyContinue
+} else {
+    $env:GOOGLE_CLIENT_SECRET = $GoogleClientSecret
+}
+
+if ([string]::IsNullOrWhiteSpace($GithubClientId)) {
+    Remove-Item Env:GITHUB_CLIENT_ID -ErrorAction SilentlyContinue
+} else {
+    $env:GITHUB_CLIENT_ID = $GithubClientId
+}
+
+if ([string]::IsNullOrWhiteSpace($GithubClientSecret)) {
+    Remove-Item Env:GITHUB_CLIENT_SECRET -ErrorAction SilentlyContinue
+} else {
+    $env:GITHUB_CLIENT_SECRET = $GithubClientSecret
+}
+
 & ".\mvnw.cmd" spring-boot:run
