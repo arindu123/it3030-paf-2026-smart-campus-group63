@@ -131,12 +131,76 @@ function sanitizeCapacityInput(value: string) {
   return value.replace(/[^\d]/g, "");
 }
 
+function escapePdfText(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function truncatePdfText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
+function buildPdfDocument(pageContents: string[]) {
+  const objects: string[] = [];
+  const pageObjectNumbers: number[] = [];
+  const contentObjectNumbers: number[] = [];
+
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
+
+  let nextObjectNumber = 5;
+
+  pageContents.forEach((content) => {
+    const pageObjectNumber = nextObjectNumber++;
+    const contentObjectNumber = nextObjectNumber++;
+
+    pageObjectNumbers.push(pageObjectNumber);
+    contentObjectNumbers.push(contentObjectNumber);
+
+    objects[pageObjectNumber] =
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`;
+    objects[contentObjectNumber] = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+  });
+
+  objects[2] = `<< /Type /Pages /Count ${pageObjectNumbers.length} /Kids [${pageObjectNumbers.map((number) => `${number} 0 R`).join(" ")}] >>`;
+
+  let pdf = "%PDF-1.4\n";
+  const offsets: number[] = [];
+
+  for (let index = 1; index < objects.length; index += 1) {
+    if (!objects[index]) {
+      continue;
+    }
+
+    offsets[index] = pdf.length;
+    pdf += `${index} 0 obj\n${objects[index]}\nendobj\n`;
+  }
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length}\n`;
+  pdf += "0000000000 65535 f \n";
+
+  for (let index = 1; index < objects.length; index += 1) {
+    const offset = offsets[index] ?? 0;
+    pdf += `${offset.toString().padStart(10, "0")} 00000 n \n`;
+  }
+
+  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return new TextEncoder().encode(pdf);
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [currentAdminEmail, setCurrentAdminEmail] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [resourceForm, setResourceForm] = useState<ResourceForm>(defaultResourceForm);
   const [roleEdits, setRoleEdits] = useState<Record<number, UserRole>>({});
   const [activeUserAction, setActiveUserAction] = useState<number | null>(null);
@@ -157,6 +221,11 @@ export default function AdminDashboardPage() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserConfirmPassword, setNewUserConfirmPassword] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
+  const [isExportingResourcesPdf, setIsExportingResourcesPdf] = useState(false);
+  const [activeBookingAction, setActiveBookingAction] = useState<number | null>(null);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -533,6 +602,229 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function approveBooking(bookingId: number) {
+    setActiveBookingAction(bookingId);
+    setError("");
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      setActiveBookingAction(null);
+      return;
+    }
+
+    try {
+      await fetchJson<Booking>(`${API_BASE_URL}/bookings/${bookingId}/approve`, {
+        method: "PATCH",
+        headers: {
+          "X-User-Email": currentAdminEmail,
+        },
+      });
+
+      setMessage(`Booking #${bookingId} approved.`);
+      await loadAdminData();
+    } catch (bookingError) {
+      setError(bookingError instanceof Error ? bookingError.message : "Failed to approve booking.");
+    } finally {
+      setActiveBookingAction(null);
+    }
+  }
+
+  function openRejectModal(bookingId: number) {
+    setRejectingBookingId(bookingId);
+    setRejectionReason("");
+    setError("");
+    setIsRejectModalOpen(true);
+  }
+
+  function closeRejectModal() {
+    setIsRejectModalOpen(false);
+    setRejectingBookingId(null);
+    setRejectionReason("");
+  }
+
+  async function submitRejectBooking() {
+    if (rejectingBookingId == null) {
+      return;
+    }
+
+    setActiveBookingAction(rejectingBookingId);
+    setError("");
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      setActiveBookingAction(null);
+      return;
+    }
+
+    try {
+      await fetchJson<Booking>(`${API_BASE_URL}/bookings/${rejectingBookingId}/reject`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": currentAdminEmail,
+        },
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+
+      setMessage(`Booking #${rejectingBookingId} rejected.`);
+      closeRejectModal();
+      await loadAdminData();
+    } catch (bookingError) {
+      setError(bookingError instanceof Error ? bookingError.message : "Failed to reject booking.");
+    } finally {
+      setActiveBookingAction(null);
+    }
+  }
+
+  function exportResourcesPdf() {
+    setError("");
+
+    if (resources.length === 0) {
+      setError("No resources available to export.");
+      return;
+    }
+
+    setIsExportingResourcesPdf(true);
+
+    try {
+      const generatedAt = new Date().toLocaleString();
+      const pageContents: string[] = [];
+      const marginX = 40;
+      const pageTop = 792;
+      const pageBottom = 40;
+      const contentWidth = 532;
+      const tableColumns = [
+        { label: "ID", width: 34 },
+        { label: "NAME", width: 88 },
+        { label: "TYPE", width: 44 },
+        { label: "CAPACITY", width: 56 },
+        { label: "LOCATION", width: 68 },
+        { label: "STATUS", width: 54 },
+        { label: "AVAILABILITY", width: 88 },
+        { label: "DESCRIPTION", width: 100 },
+      ];
+
+      let currentOps: string[] = [];
+      let currentY = pageTop - 48;
+
+      const startPage = (withFullHeader: boolean) => {
+        currentOps = [];
+        currentY = pageTop - 48;
+
+        if (withFullHeader) {
+          currentOps.push("BT /F2 28 Tf 40 730 Td (Smart Campus Resources Report) Tj ET");
+          currentOps.push("BT /F1 12 Tf 40 700 Td (Generated by admin dashboard) Tj ET");
+          currentOps.push(`BT /F1 12 Tf 40 682 Td (${escapePdfText(`Generated at: ${generatedAt}`)}) Tj ET`);
+
+          currentOps.push("0.85 0.85 0.85 RG");
+          currentOps.push("0.99 0.99 0.99 rg");
+          currentOps.push("40 560 532 84 re B");
+          currentOps.push("0 0 0 rg");
+          currentOps.push("BT /F2 14 Tf 56 618 Td (Total Resources:) Tj ET");
+          currentOps.push(`BT /F1 14 Tf 172 618 Td (${resources.length}) Tj ET`);
+          currentOps.push("BT /F2 14 Tf 56 590 Td (Active Resources:) Tj ET");
+          currentOps.push(`BT /F1 14 Tf 179 590 Td (${overview.activeResourceCount}) Tj ET`);
+          currentOps.push("BT /F2 14 Tf 56 562 Td (Out of Service:) Tj ET");
+          currentOps.push(`BT /F1 14 Tf 162 562 Td (${resources.length - overview.activeResourceCount}) Tj ET`);
+          currentY = 520;
+        } else {
+          currentOps.push("BT /F2 18 Tf 40 735 Td (Smart Campus Resources Report) Tj ET");
+          currentOps.push(`BT /F1 11 Tf 40 716 Td (${escapePdfText(`Generated at: ${generatedAt}`)}) Tj ET`);
+          currentY = 680;
+        }
+      };
+
+      const drawTableHeader = () => {
+        const headerHeight = 28;
+        let x = marginX;
+
+        currentOps.push("0.94 0.94 0.94 rg");
+        currentOps.push("0.78 0.78 0.78 RG");
+        currentOps.push(`${marginX} ${currentY - headerHeight} ${contentWidth} ${headerHeight} re B`);
+        currentOps.push("0 0 0 rg");
+
+        tableColumns.forEach((column, index) => {
+          if (index > 0) {
+            currentOps.push(`${x} ${currentY - headerHeight} m ${x} ${currentY} l S`);
+          }
+          currentOps.push(
+            `BT /F2 10 Tf ${x + 6} ${currentY - 18} Td (${escapePdfText(column.label)}) Tj ET`
+          );
+          x += column.width;
+        });
+
+        currentY -= headerHeight;
+      };
+
+      const pushCurrentPage = () => {
+        pageContents.push(currentOps.join("\n"));
+      };
+
+      startPage(true);
+      drawTableHeader();
+
+      resources.forEach((resource) => {
+        const rowHeight = 32;
+        if (currentY - rowHeight < pageBottom) {
+          pushCurrentPage();
+          startPage(false);
+          drawTableHeader();
+        }
+
+        const cells = [
+          String(resource.id),
+          truncatePdfText(resource.name, 20),
+          truncatePdfText(resource.type, 10),
+          String(resource.capacity),
+          truncatePdfText(resource.location, 16),
+          truncatePdfText(resource.status, 12),
+          truncatePdfText(`${resource.availableFrom} - ${resource.availableTo}`, 24),
+          truncatePdfText(resource.description, 20),
+        ];
+
+        let x = marginX;
+        currentOps.push("1 1 1 rg");
+        currentOps.push("0.78 0.78 0.78 RG");
+        currentOps.push(`${marginX} ${currentY - rowHeight} ${contentWidth} ${rowHeight} re B`);
+        currentOps.push("0 0 0 rg");
+
+        cells.forEach((cell, index) => {
+          if (index > 0) {
+            currentOps.push(`${x} ${currentY - rowHeight} m ${x} ${currentY} l S`);
+          }
+          currentOps.push(
+            `BT /F1 10 Tf ${x + 6} ${currentY - 20} Td (${escapePdfText(cell)}) Tj ET`
+          );
+          x += tableColumns[index].width;
+        });
+
+        currentY -= rowHeight;
+      });
+
+      pushCurrentPage();
+
+      const pdfBytes = buildPdfDocument(pageContents);
+      const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+      const pdfUrl = window.URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement("a");
+      const dateStamp = new Date().toISOString().slice(0, 10);
+
+      downloadLink.href = pdfUrl;
+      downloadLink.download = `smart-campus-resources-${dateStamp}.pdf`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(pdfUrl);
+      }, 1000);
+    } catch (exportError) {
+      setError(exportError instanceof Error ? exportError.message : "Failed to generate PDF report.");
+    } finally {
+      setIsExportingResourcesPdf(false);
+    }
+  }
+
   return (
     <SiteFrame accent="sky">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
@@ -688,6 +980,16 @@ export default function AdminDashboardPage() {
             description="Update status or remove resources without leaving the dashboard."
           >
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <button
+                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isExportingResourcesPdf || resources.length === 0}
+                  onClick={exportResourcesPdf}
+                  type="button"
+                >
+                  {isExportingResourcesPdf ? "Preparing PDF..." : "Export Resources PDF"}
+                </button>
+              </div>
               {resources.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-8 text-center text-sm text-stone-500">
                   No resources yet. Create one from the form on this page.
