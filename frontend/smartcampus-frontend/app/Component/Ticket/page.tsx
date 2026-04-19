@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -35,9 +36,12 @@ export default function TicketPage() {
   const router = useRouter();
   const [actorEmail, setActorEmail] = useState<string>("");
   const [actorRole, setActorRole] = useState<UserRole>("USER");
+  const [actorName, setActorName] = useState<string>("Campus Admin");
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [statusFilter, setStatusFilter] = useState<"ALL" | TicketStatus>("ALL");
+  const [priorityFilter, setPriorityFilter] = useState<"ALL" | (typeof ticketPriorities)[number]>("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
   const [technicians, setTechnicians] = useState<AdminUser[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
 
@@ -77,6 +81,7 @@ export default function TicketPage() {
 
     setActorEmail(user.email);
     setActorRole(normalizeRole(user.role));
+    setActorName(user.fullName?.trim() || user.email);
   }, [router]);
 
   const loadTickets = useCallback(async (selectedStatus: "ALL" | TicketStatus = statusFilter) => {
@@ -424,8 +429,57 @@ export default function TicketPage() {
 
   const resolvedTickets = tickets.filter((ticket) => ticket.status === "RESOLVED").length;
   const openTickets = tickets.filter((ticket) => ticket.status === "OPEN").length;
+  const inProgressTickets = tickets.filter((ticket) => ticket.status === "IN_PROGRESS").length;
+  const resolvedOrClosedTickets = tickets.filter(
+    (ticket) => ticket.status === "RESOLVED" || ticket.status === "CLOSED"
+  ).length;
 
   const statusOptions = useMemo(() => ["ALL", ...ticketStatuses] as const, []);
+  const priorityOptions = useMemo(() => ["ALL", ...ticketPriorities] as const, []);
+
+  const filteredTickets = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return tickets.filter((ticket) => {
+      const matchesPriority = priorityFilter === "ALL" || ticket.priority === priorityFilter;
+      if (!matchesPriority) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchFields = [
+        String(ticket.id),
+        ticket.title,
+        ticket.description,
+        ticket.category,
+        ticket.priority,
+        ticket.status,
+        ticket.createdBy,
+        ticket.assignedTo,
+        ticket.relatedResource,
+        ticket.relatedLocation,
+      ].filter((value): value is string => Boolean(value));
+
+      return searchFields.some((value) => value.toLowerCase().includes(normalizedSearch));
+    });
+  }, [tickets, searchTerm, priorityFilter]);
+
+  const actorInitials = useMemo(() => {
+    const cleanedName = actorName.trim();
+    if (!cleanedName) {
+      return "AD";
+    }
+
+    const words = cleanedName.split(/\s+/).filter(Boolean);
+    if (words.length >= 2) {
+      return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+    }
+
+    return cleanedName.slice(0, 2).toUpperCase();
+  }, [actorName]);
 
   function canManageTicket(ticket: Ticket) {
     if (actorRole === "ADMIN") {
@@ -615,56 +669,213 @@ export default function TicketPage() {
   );
 
   return (
-    <SiteFrame accent="amber">
-      <div className="mx-auto max-w-7xl">
-          <DashboardHero
-            description="This ticket desk is wired to your Spring Boot backend on port 8089 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
-            eyebrow="UniDesk Ticket Desk"
-            error={error}
-            message={message}
-            onRefresh={() => void loadTickets()}
-            action={
-              <button
-                type="button"
-                onClick={() => setIsTicketModalOpen(true)}
-                className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-              >
-                Raise a ticket
-              </button>
-            }
-            stats={[
-              { label: "Tickets", value: String(tickets.length), tone: "warm" },
-              { label: "Open", value: String(openTickets), tone: "cool" },
-              { label: "Resolved", value: String(resolvedTickets), tone: "cool" },
-              { label: "Backend", value: loading ? "Syncing" : "Online", tone: "dark" },
-            ]}
-            title="Manage campus tickets from one focused workspace."
-          />
+    <SiteFrame accent={actorRole === "ADMIN" ? "sky" : "amber"}>
+      <div className={`mx-auto w-full ${actorRole === "ADMIN" ? "max-w-[1520px]" : "max-w-7xl"}`}>
+        <div className={actorRole === "ADMIN" ? "grid gap-6 lg:grid-cols-[270px_minmax(0,1fr)]" : ""}>
+          {actorRole === "ADMIN" ? (
+            <aside className="rounded-[2rem] bg-[linear-gradient(180deg,#1f2677_0%,#1b2164_100%)] p-6 text-white shadow-[0_22px_55px_rgba(23,31,103,0.28)]">
+              <div className="flex items-center gap-2 text-sm font-semibold tracking-wide text-blue-100">
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[radial-gradient(circle,#ffb703_18%,#ff006e_48%,#3a86ff_78%)]" />
+                VertexOne
+              </div>
 
-          <section className="grid gap-8" suppressHydrationWarning>
+              <div className="mt-8 text-center">
+                <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#f3bda1] text-xl font-semibold text-[#262869]">
+                  {actorInitials}
+                </div>
+                <p className="mt-3 text-lg font-semibold leading-tight">{actorName}</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-blue-200">ADMIN</p>
+              </div>
+
+              <div className="mt-10">
+                <p className="text-3xl font-bold leading-tight text-[#f0c979]">Admin Panel</p>
+                <p className="text-3xl font-bold leading-tight text-white">Operations</p>
+              </div>
+
+              <div className="mt-8 space-y-3">
+                <Link
+                  href="/Component/dashboard/admin"
+                  className="block rounded-full bg-white/10 px-5 py-3 text-lg font-semibold text-blue-100 transition hover:bg-white/20"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/Component/dashboard/admin"
+                  className="block rounded-full bg-white/10 px-5 py-3 text-lg font-semibold text-blue-100 transition hover:bg-white/20"
+                >
+                  Users
+                </Link>
+                <Link
+                  href="/Component/resources"
+                  className="block rounded-full bg-white/10 px-5 py-3 text-lg font-semibold text-blue-100 transition hover:bg-white/20"
+                >
+                  Resources
+                </Link>
+                <Link
+                  href="/Component/bookings"
+                  className="block rounded-full bg-white/10 px-5 py-3 text-lg font-semibold text-blue-100 transition hover:bg-white/20"
+                >
+                  Bookings
+                </Link>
+                <Link
+                  href="/Component/Ticket"
+                  className="block rounded-full bg-white px-5 py-3 text-lg font-semibold text-[#1f2677] shadow-sm"
+                >
+                  Tickets
+                </Link>
+              </div>
+            </aside>
+          ) : null}
+
+          <div className={actorRole === "ADMIN" ? "space-y-6" : ""}>
+            {actorRole === "ADMIN" ? (
+              <>
+                <section className="rounded-[2rem] bg-[linear-gradient(135deg,#252d83_0%,#1f2677_100%)] px-7 py-8 text-white shadow-[0_24px_70px_rgba(27,33,100,0.30)]">
+                  <h1 className="text-4xl font-semibold tracking-[-0.03em]">Admin Ticket Management</h1>
+                  <p className="mt-3 max-w-3xl text-base text-blue-100">
+                    Review all maintenance tickets, monitor workflow, and open next actions for assignment and status handling.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void loadTickets(statusFilter)}
+                    className="mt-6 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                  >
+                    Refresh Tickets
+                  </button>
+                </section>
+
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Total Tickets</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">{tickets.length}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Open</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">{openTickets}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">In Progress</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">{inProgressTickets}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Resolved / Closed</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">{resolvedOrClosedTickets}</p>
+                  </div>
+                </section>
+
+                <section className="rounded-[1.7rem] border border-white/70 bg-white/90 p-6 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2677]">Filter and Search</h2>
+                      <p className="mt-2 text-sm text-slate-600">
+                        Search by ticket id, title, description, or category and narrow the list by status and priority.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsTicketModalOpen(true)}
+                      className="rounded-2xl border border-[#1f2677]/15 bg-[#1f2677] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#27329b]"
+                    >
+                      Raise Ticket
+                    </button>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    <label className="grid gap-2 text-sm font-semibold text-slate-700 md:col-span-1">
+                      Search
+                      <input
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Search tickets..."
+                        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#1f2677]/40 focus:ring-4 focus:ring-[#1f2677]/10"
+                      />
+                    </label>
+                    <SelectField
+                      label="Status"
+                      onChange={(value) => {
+                        const selected = value as "ALL" | TicketStatus;
+                        setStatusFilter(selected);
+                        void loadTickets(selected);
+                      }}
+                      options={statusOptions}
+                      value={statusFilter}
+                    />
+                    <SelectField
+                      label="Priority"
+                      onChange={(value) => setPriorityFilter(value as "ALL" | (typeof ticketPriorities)[number])}
+                      options={priorityOptions}
+                      value={priorityFilter}
+                    />
+                  </div>
+                </section>
+              </>
+            ) : (
+              <DashboardHero
+                description="This ticket desk is wired to your Spring Boot backend on port 8089 so you can create, review, assign, and resolve maintenance issues without leaving the frontend."
+                eyebrow="UniDesk Ticket Desk"
+                error={error}
+                message={message}
+                onRefresh={() => void loadTickets()}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setIsTicketModalOpen(true)}
+                    className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+                  >
+                    Raise a ticket
+                  </button>
+                }
+                stats={[
+                  { label: "Tickets", value: String(tickets.length), tone: "warm" },
+                  { label: "Open", value: String(openTickets), tone: "cool" },
+                  { label: "Resolved", value: String(resolvedTickets), tone: "cool" },
+                  { label: "Backend", value: loading ? "Syncing" : "Online", tone: "dark" },
+                ]}
+                title="Manage campus tickets from one focused workspace."
+              />
+            )}
+
+            <section className="grid gap-8" suppressHydrationWarning>
             <Panel
               eyebrow="Tickets"
               title="Current ticket queue"
               description="View full details, comments, progress updates, assignment, and workflow transitions."
             >
-              <div className="mb-4">
-                <SelectField
-                  label="Filter by status"
-                  onChange={(value) => {
-                    const selected = value as "ALL" | TicketStatus;
-                    setStatusFilter(selected);
-                    void loadTickets(selected);
-                  }}
-                  options={statusOptions}
-                  value={statusFilter}
-                />
-              </div>
+              {actorRole !== "ADMIN" ? (
+                <div className="mb-4 grid gap-4 md:grid-cols-3">
+                  <SelectField
+                    label="Filter by status"
+                    onChange={(value) => {
+                      const selected = value as "ALL" | TicketStatus;
+                      setStatusFilter(selected);
+                      void loadTickets(selected);
+                    }}
+                    options={statusOptions}
+                    value={statusFilter}
+                  />
+                  <SelectField
+                    label="Filter by priority"
+                    onChange={(value) => setPriorityFilter(value as "ALL" | (typeof ticketPriorities)[number])}
+                    options={priorityOptions}
+                    value={priorityFilter}
+                  />
+                  <label className="grid gap-2 text-sm font-medium text-stone-700">
+                    Search tickets
+                    <input
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Search by title, status, category"
+                      className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                    />
+                  </label>
+                </div>
+              ) : null}
 
               <div className="space-y-4">
-                {tickets.length === 0 ? (
+                {filteredTickets.length === 0 ? (
                   <EmptyState text="No tickets yet. Create your first one from the form on this page." />
                 ) : (
-                  tickets.map((ticket) => (
+                  filteredTickets.map((ticket) => (
                     <article
                       key={ticket.id}
                       className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
@@ -990,6 +1201,8 @@ export default function TicketPage() {
               </div>
             </Panel>
           </section>
+          </div>
+        </div>
           {isPreviewOpen ? (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
@@ -1004,7 +1217,7 @@ export default function TicketPage() {
                   onClick={closePreview}
                   className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-900 shadow-sm transition hover:bg-white"
                 >
-                  ×
+                  X
                 </button>
                 <img
                   alt={previewImageName}
@@ -1022,3 +1235,4 @@ export default function TicketPage() {
     </SiteFrame>
   );
 }
+
