@@ -110,7 +110,7 @@ export default function ResourcesPage() {
       return true;
     }
 
-    return [resource.name, resource.type, resource.location, resource.description, resource.status]
+    return [resource.name, resource.type, resource.location, resource.description, resource.status, String(resource.capacity)]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(normalizedSearchTerm));
   });
@@ -143,7 +143,7 @@ export default function ResourcesPage() {
               <input
                 className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by name, type, location, or status"
+                placeholder="Search by name, type, location, status, or capacity"
                 type="search"
                 value={searchTerm}
               />
