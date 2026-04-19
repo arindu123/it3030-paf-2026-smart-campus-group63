@@ -14,6 +14,9 @@ public class BookingResponse {
     private String purpose;
     private Integer expectedAttendees;
     private String status;
+    private String createdBy;
+    private String rejectionReason;
+    private String createdAt;
 
     public BookingResponse() {}
 
@@ -101,5 +104,29 @@ public class BookingResponse {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 }

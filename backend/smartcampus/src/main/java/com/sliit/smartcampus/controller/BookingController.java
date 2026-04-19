@@ -1,6 +1,7 @@
 package com.sliit.smartcampus.controller;
 
 import com.sliit.smartcampus.dto.BookingRequest;
+import com.sliit.smartcampus.dto.BookingDecisionRequest;
 import com.sliit.smartcampus.dto.BookingResponse;
 import com.sliit.smartcampus.service.BookingService;
 import org.springframework.web.bind.annotation.*;
@@ -19,8 +20,9 @@ public class BookingController {
     }
 
     @PostMapping
-    public BookingResponse createBooking(@RequestBody BookingRequest request) {
-        return bookingService.createBooking(request);
+    public BookingResponse createBooking(@RequestBody BookingRequest request,
+                                         @RequestHeader("X-User-Email") String actorEmail) {
+        return bookingService.createBooking(request, actorEmail);
     }
 
     @GetMapping
@@ -34,8 +36,23 @@ public class BookingController {
     }
 
     @DeleteMapping("/{id}")
-    public String deleteBooking(@PathVariable Long id) {
-        bookingService.deleteBooking(id);
+    public String deleteBooking(@PathVariable Long id,
+                                @RequestHeader("X-User-Email") String actorEmail) {
+        bookingService.deleteBooking(id, actorEmail);
         return "Booking cancelled successfully";
+    }
+
+    @PatchMapping("/{id}/approve")
+    public BookingResponse approveBooking(@PathVariable Long id,
+                                          @RequestHeader("X-User-Email") String actorEmail) {
+        return bookingService.approveBooking(id, actorEmail);
+    }
+
+    @PatchMapping("/{id}/reject")
+    public BookingResponse rejectBooking(@PathVariable Long id,
+                                         @RequestBody(required = false) BookingDecisionRequest request,
+                                         @RequestHeader("X-User-Email") String actorEmail) {
+        BookingDecisionRequest safeRequest = request == null ? new BookingDecisionRequest() : request;
+        return bookingService.rejectBooking(id, safeRequest, actorEmail);
     }
 }

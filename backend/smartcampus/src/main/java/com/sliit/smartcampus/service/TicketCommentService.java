@@ -6,6 +6,7 @@ import com.sliit.smartcampus.dto.ticket.TicketCommentUpdateRequest;
 import com.sliit.smartcampus.entity.Ticket;
 import com.sliit.smartcampus.entity.TicketComment;
 import com.sliit.smartcampus.entity.User;
+import com.sliit.smartcampus.enums.CampusNotificationType;
 import com.sliit.smartcampus.exception.NotFoundException;
 import com.sliit.smartcampus.repository.TicketCommentRepository;
 import org.springframework.stereotype.Service;
@@ -18,16 +19,16 @@ public class TicketCommentService {
     private final TicketCommentRepository ticketCommentRepository;
     private final TicketService ticketService;
     private final TicketAuthorizationService ticketAuthorizationService;
-    private final TicketNotificationService ticketNotificationService;
+    private final CampusNotificationService campusNotificationService;
 
     public TicketCommentService(TicketCommentRepository ticketCommentRepository,
                                 TicketService ticketService,
                                 TicketAuthorizationService ticketAuthorizationService,
-                                TicketNotificationService ticketNotificationService) {
+                                CampusNotificationService campusNotificationService) {
         this.ticketCommentRepository = ticketCommentRepository;
         this.ticketService = ticketService;
         this.ticketAuthorizationService = ticketAuthorizationService;
-        this.ticketNotificationService = ticketNotificationService;
+        this.campusNotificationService = campusNotificationService;
     }
 
     public TicketCommentResponse addComment(Long ticketId,
@@ -46,7 +47,15 @@ public class TicketCommentService {
         comment.setOwnerUser(actor);
 
         TicketComment saved = ticketCommentRepository.save(comment);
-        ticketNotificationService.notifyTicketOwnerForNewComment(ticket, actor.getEmail());
+        campusNotificationService.notifyEmail(
+            ticket.getCreatedBy(),
+            ticket.getCreatedByUser() != null ? ticket.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.TICKET_COMMENT_ADDED,
+            "New comment added",
+            "A new comment was added to ticket #" + ticket.getId() + ".",
+            "TICKET",
+            ticket.getId()
+        );
         return toResponse(saved);
     }
 
