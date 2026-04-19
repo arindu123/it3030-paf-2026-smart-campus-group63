@@ -34,6 +34,8 @@ export default function ResourcesPage() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState<BookingForm>(defaultBookingForm(0, ""));
   const [bookingError, setBookingError] = useState("");
+  const [selectedResourceId, setSelectedResourceId] = useState<number | null>(null);
+  const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ResourceStatusFilter>("ALL");
 
@@ -117,6 +119,8 @@ export default function ResourcesPage() {
   function closeBookingModal() {
     setIsBookingModalOpen(false);
     setBookingError("");
+    setSelectedResourceId(null);
+    setBookedSlots([]);
   }
 
   async function submitBooking(event: FormEvent<HTMLFormElement>) {

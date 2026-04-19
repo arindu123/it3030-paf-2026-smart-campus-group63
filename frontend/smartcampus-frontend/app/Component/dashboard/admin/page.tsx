@@ -157,6 +157,13 @@ export default function AdminDashboardPage() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserConfirmPassword, setNewUserConfirmPassword] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [activeBookingAction, setActiveBookingAction] = useState<number | null>(null);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [approvingBookingId, setApprovingBookingId] = useState<number | null>(null);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -530,6 +537,98 @@ export default function AdminDashboardPage() {
       setError(saveError instanceof Error ? saveError.message : "Failed to save resource.");
     } finally {
       setActiveResourceAction(null);
+    }
+  }
+
+  function openApproveModal(bookingId: number) {
+    setApprovingBookingId(bookingId);
+    setIsApproveModalOpen(true);
+  }
+
+  function closeApproveModal() {
+    setIsApproveModalOpen(false);
+    setApprovingBookingId(null);
+  }
+
+  function openRejectModal(bookingId: number) {
+    setRejectingBookingId(bookingId);
+    setRejectionReason("");
+    setIsRejectModalOpen(true);
+  }
+
+  function closeRejectModal() {
+    setIsRejectModalOpen(false);
+    setRejectingBookingId(null);
+    setRejectionReason("");
+  }
+
+  async function submitApproveBooking() {
+    if (!approvingBookingId) {
+      return;
+    }
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      return;
+    }
+
+    setActiveBookingAction(approvingBookingId);
+    setError("");
+
+    try {
+      await fetchJson(`${API_BASE_URL}/bookings/${approvingBookingId}/approve`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": currentAdminEmail,
+        },
+      });
+
+      setMessage(`Booking #${approvingBookingId} approved.`);
+      closeApproveModal();
+      await loadAdminData();
+    } catch (approveError) {
+      setError(approveError instanceof Error ? approveError.message : "Failed to approve booking.");
+    } finally {
+      setActiveBookingAction(null);
+    }
+  }
+
+  async function submitRejectBooking() {
+    if (!rejectingBookingId) {
+      return;
+    }
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      return;
+    }
+
+    if (!rejectionReason.trim()) {
+      setError("Please provide a rejection reason.");
+      return;
+    }
+
+    setActiveBookingAction(rejectingBookingId);
+    setError("");
+
+    try {
+      await fetchJson(`${API_BASE_URL}/bookings/${rejectingBookingId}/reject`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": currentAdminEmail,
+        },
+        body: JSON.stringify({ reason: rejectionReason.trim() }),
+      });
+
+      setMessage(`Booking #${rejectingBookingId} rejected.`);
+      closeRejectModal();
+      await loadAdminData();
+    } catch (rejectError) {
+      setError(rejectError instanceof Error ? rejectError.message : "Failed to reject booking.");
+    } finally {
+      setActiveBookingAction(null);
     }
   }
 
