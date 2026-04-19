@@ -6,6 +6,11 @@ import { API_BASE_URL, BookingForm, defaultBookingForm, fetchJson, Resource } fr
 import { DashboardHero, EmptyState, Panel } from "../shared/CampusUi";
 import { SiteFrame } from "../shared/SiteFrame";
 
+type BookedSlot = {
+  startTime: string;
+  endTime: string;
+};
+
 export default function ResourcesPage() {
   const router = useRouter();
   const [resources, setResources] = useState<Resource[]>([]);
@@ -16,6 +21,8 @@ export default function ResourcesPage() {
   const [bookingForm, setBookingForm] = useState<BookingForm>(defaultBookingForm(0, ""));
   const [bookingError, setBookingError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
+  const [selectedResourceId, setSelectedResourceId] = useState<number | null>(null);
 
   const loadResources = useCallback(async () => {
     setLoading(true);
@@ -42,7 +49,46 @@ export default function ResourcesPage() {
   function openBookingModal(resourceId: number, resourceName: string) {
     setBookingForm(defaultBookingForm(resourceId, resourceName));
     setBookingError("");
+    setSelectedResourceId(resourceId);
+    setBookedSlots([]);
     setIsBookingModalOpen(true);
+  }
+
+  async function loadBookedSlots(resourceId: number, date: string) {
+    try {
+      const allBookings = await fetchJson<Array<{ id: number; resourceName: string; date: string; startTime: string; endTime: string; status: string }>>
+        (`${API_BASE_URL}/bookings`);
+      
+      const selectedResource = resources.find((r) => r.id === resourceId);
+      const approvedBookings = allBookings.filter(
+        (booking) =>
+          booking.resourceName === selectedResource?.name &&
+          booking.date === date &&
+          booking.status === "APPROVED"
+      );
+      
+      const slots = approvedBookings.map((booking) => ({
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+      }));
+      
+      setBookedSlots(slots);
+    } catch {
+      setBookedSlots([]);
+    }
+  }
+
+  function isTimeSlotConflict(startTime: string, endTime: string): boolean {
+    if (!startTime || !endTime) return false;
+    
+    return bookedSlots.some((slot) => {
+      const newStart = startTime;
+      const newEnd = endTime;
+      const bookedStart = slot.startTime;
+      const bookedEnd = slot.endTime;
+      
+      return newStart < bookedEnd && newEnd > bookedStart;
+    });
   }
 
   function closeBookingModal() {
@@ -71,6 +117,11 @@ export default function ResourcesPage() {
 
     if (bookingForm.endTime <= bookingForm.startTime) {
       setBookingError("End time must be later than start time.");
+      return;
+    }
+
+    if (isTimeSlotConflict(bookingForm.startTime, bookingForm.endTime)) {
+      setBookingError("This time slot is already booked. Please select a different time.");
       return;
     }
 
@@ -217,11 +268,31 @@ export default function ResourcesPage() {
                     min={today}
                     type="date"
                     value={bookingForm.date}
-                    onChange={(event) =>
-                      setBookingForm((current) => ({ ...current, date: event.target.value }))
-                    }
+                    onChange={(event) => {
+                      setBookingForm((current) => ({ ...current, date: event.target.value }));
+                      if (selectedResourceId && event.target.value) {
+                        void loadBookedSlots(selectedResourceId, event.target.value);
+                      }
+                    }}
                   />
                 </div>
+
+                {bookedSlots.length > 0 ? (
+                  <div className="rounded-lg bg-amber-50 p-3 text-sm">
+                    <p className="font-medium text-amber-900">Booked time slots for this date:</p>
+                    <ul className="mt-2 space-y-1">
+                      {bookedSlots.map((slot, index) => (
+                        <li key={index} className="text-amber-800">
+                          {slot.startTime} - {slot.endTime}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : bookingForm.date ? (
+                  <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+                    All time slots are available for this date.
+                  </div>
+                ) : null}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
