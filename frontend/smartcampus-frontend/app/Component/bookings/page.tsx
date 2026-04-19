@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Footer from "../Home/Footer";
 import Nav from "../Home/Nav";
 import {
   API_BASE_URL,
   Booking,
   fetchJson,
+  getStoredUser,
+  withActorHeaders,
 } from "../shared/campusApi";
 import {
   DashboardHero,
@@ -15,17 +18,26 @@ import {
 } from "../shared/CampusUi";
 
 export default function BookingsPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Your resource bookings dashboard");
   const [error, setError] = useState("");
 
   const loadBookings = useCallback(async () => {
+    if (!getStoredUser()?.email) {
+      router.replace("/Component/Login");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      const bookingData = await fetchJson<Booking[]>(`${API_BASE_URL}/bookings`);
+      const bookingData = await fetchJson<Booking[]>(
+        `${API_BASE_URL}/bookings`,
+        withActorHeaders()
+      );
       setBookings(bookingData);
       setMessage("Bookings synced with backend API.");
     } catch (loadError) {
@@ -37,15 +49,13 @@ export default function BookingsPage() {
 
   useEffect(() => {
     void loadBookings();
-  }, [loadBookings]);
+  }, [loadBookings, router]);
 
   async function cancelBooking(id: number) {
     setError("");
 
     try {
-      await fetchJson(`${API_BASE_URL}/bookings/${id}`, {
-        method: "DELETE",
-      });
+      await fetchJson(`${API_BASE_URL}/bookings/${id}`, withActorHeaders({ method: "DELETE" }));
 
       setMessage(`Booking #${id} cancelled.`);
       await loadBookings();

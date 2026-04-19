@@ -1,6 +1,7 @@
 package com.sliit.smartcampus.service;
 
 import com.sliit.smartcampus.dto.LoginRequest;
+import com.sliit.smartcampus.dto.AdminCreateUserRequest;
 import com.sliit.smartcampus.dto.RegisterRequest;
 import com.sliit.smartcampus.entity.User;
 import com.sliit.smartcampus.enums.AuthProvider;
@@ -58,18 +59,68 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User createAdminUser(AdminCreateUserRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        if (request.getFullName() == null || request.getFullName().isBlank()
+            || request.getEmail() == null || request.getEmail().isBlank()
+            || request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()
+            || request.getDepartment() == null || request.getDepartment().isBlank()) {
+            throw new IllegalArgumentException("All user fields are required");
+        }
+
+        if (!request.getEmail().contains("@") || !request.getEmail().contains(".")) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+
+        UserRole role = request.getRole() == null ? UserRole.USER : request.getRole();
+        AuthProvider provider = request.getProvider() == null ? AuthProvider.LOCAL : request.getProvider();
+
+        if (provider == AuthProvider.LOCAL) {
+            if (request.getPassword() == null || request.getPassword().isBlank()) {
+                throw new IllegalArgumentException("Password is required for LOCAL accounts");
+            }
+            if (request.getPassword().length() < 6) {
+                throw new IllegalArgumentException("Password must be at least 6 characters");
+            }
+            if (!request.getPassword().equals(request.getConfirmPassword())) {
+                throw new IllegalArgumentException("Confirm password does not match");
+            }
+        }
+
+        User user = new User();
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setDepartment(request.getDepartment());
+        user.setRole(role);
+        user.setProvider(provider);
+        user.setProviderId(null);
+        if (provider == AuthProvider.LOCAL) {
+            user.setPassword(request.getPassword());
+        } else {
+            user.setPassword(provider.name() + "_" + UUID.randomUUID());
+        }
+        user.setLastLoginAt(null);
+        user.setLastSeenAt(null);
+
+        return userRepository.save(user);
+    }
+
     public Optional<User> authenticate(LoginRequest request) {
         return userRepository.findByEmail(request.getEmail())
                 .filter(user -> user.getPassword() != null && user.getPassword().equals(request.getPassword()));
     }
 
-    public boolean isGoogleAccount(String email) {
+    public boolean isSocialAccount(String email) {
         return userRepository.findByEmail(email)
-                .map(user -> user.getProvider() == AuthProvider.GOOGLE)
+                .map(user -> user.getProvider() != null && user.getProvider() != AuthProvider.LOCAL)
                 .orElse(false);
     }
 
-    public User handleGoogleLogin(String email, String fullName, String providerId) {
+    public User handleOAuthLogin(String email, String fullName, String providerId, AuthProvider provider) {
         Optional<User> existingUser = userRepository.findByEmail(email);
 
         if (existingUser.isPresent()) {
@@ -81,11 +132,11 @@ public class UserService {
                 changed = true;
             }
             if (user.getProvider() == null) {
-                user.setProvider(AuthProvider.GOOGLE);
+                user.setProvider(provider);
                 changed = true;
             }
             if (user.getFullName() == null || user.getFullName().isBlank()) {
-                user.setFullName((fullName == null || fullName.isBlank()) ? "Google User" : fullName);
+                user.setFullName((fullName == null || fullName.isBlank()) ? "Campus User" : fullName);
                 changed = true;
             }
             if (user.getPhoneNumber() == null || user.getPhoneNumber().isBlank()) {
@@ -97,14 +148,12 @@ public class UserService {
                 changed = true;
             }
             if (user.getPassword() == null || user.getPassword().isBlank()) {
-                user.setPassword("GOOGLE_" + UUID.randomUUID());
+                user.setPassword(provider.name() + "_" + UUID.randomUUID());
                 changed = true;
             }
-            if (providerId != null && !providerId.isBlank()) {
-                if (!providerId.equals(user.getProviderId())) {
-                    user.setProviderId(providerId);
-                    changed = true;
-                }
+            if (providerId != null && !providerId.isBlank() && !providerId.equals(user.getProviderId())) {
+                user.setProviderId(providerId);
+                changed = true;
             }
 
             return changed ? userRepository.save(user) : user;
@@ -112,17 +161,25 @@ public class UserService {
 
         User newUser = new User();
         newUser.setEmail(email);
-        newUser.setFullName((fullName == null || fullName.isBlank()) ? "Google User" : fullName);
-        newUser.setPassword("GOOGLE_" + UUID.randomUUID());
+        newUser.setFullName((fullName == null || fullName.isBlank()) ? "Campus User" : fullName);
+        newUser.setPassword(provider.name() + "_" + UUID.randomUUID());
         newUser.setPhoneNumber("N/A");
         newUser.setDepartment("General");
         newUser.setRole(UserRole.USER);
-        newUser.setProvider(AuthProvider.GOOGLE);
+        newUser.setProvider(provider);
         newUser.setProviderId(providerId);
         newUser.setLastLoginAt(null);
         newUser.setLastSeenAt(null);
 
         return userRepository.save(newUser);
+    }
+
+    public User handleGoogleLogin(String email, String fullName, String providerId) {
+        return handleOAuthLogin(email, fullName, providerId, AuthProvider.GOOGLE);
+    }
+
+    public User handleGitHubLogin(String email, String fullName, String providerId) {
+        return handleOAuthLogin(email, fullName, providerId, AuthProvider.GITHUB);
     }
 
     public User recordLogin(User user) {

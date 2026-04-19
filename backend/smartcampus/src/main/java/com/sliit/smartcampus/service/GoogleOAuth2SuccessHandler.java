@@ -1,18 +1,20 @@
 package com.sliit.smartcampus.service;
 
 import com.sliit.smartcampus.entity.User;
+import com.sliit.smartcampus.enums.AuthProvider;
 import com.sliit.smartcampus.enums.UserRole;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -37,18 +39,21 @@ public class GoogleOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
         try {
+            OAuth2AuthenticationToken authToken = (OAuth2AuthenticationToken) authentication;
             OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+            String registrationId = authToken.getAuthorizedClientRegistrationId();
+            AuthProvider provider = "github".equalsIgnoreCase(registrationId) ? AuthProvider.GITHUB : AuthProvider.GOOGLE;
 
-            String email = oAuth2User.getAttribute("email");
-            String name = oAuth2User.getAttribute("name");
-            String providerId = oAuth2User.getAttribute("sub");
+            String email = resolveEmail(registrationId, authToken, oAuth2User);
+            String name = resolveName(registrationId, oAuth2User);
+            String providerId = resolveProviderId(registrationId, oAuth2User);
 
             if (email == null || email.isBlank()) {
-                sendOAuthErrorRedirect(request, response, "Google account email is required");
+                sendOAuthErrorRedirect(request, response, provider.name() + " account email is required");
                 return;
             }
 
-            User user = userService.recordLogin(userService.handleGoogleLogin(email, name, providerId));
+            User user = userService.recordLogin(userService.handleOAuthLogin(email, name, providerId, provider));
             UserRole role = user.getRole() == null ? UserRole.USER : user.getRole();
 
             String redirectUrl = UriComponentsBuilder
@@ -57,17 +62,62 @@ public class GoogleOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
                     .queryParam("email", user.getEmail())
                     .queryParam("fullName", user.getFullName())
                     .queryParam("role", role.name())
+                    .queryParam("provider", registrationId)
                     .build()
                     .toUriString();
 
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         } catch (Exception ex) {
-            log.error("Google sign-in success handler failed", ex);
+            log.error("OAuth sign-in success handler failed", ex);
             String message = ex.getMessage() == null || ex.getMessage().isBlank()
-                    ? "Google sign-in failed"
-                    : "Google sign-in failed: " + ex.getMessage();
+                    ? "OAuth sign-in failed"
+                    : "OAuth sign-in failed: " + ex.getMessage();
             sendOAuthErrorRedirect(request, response, message);
         }
+    }
+
+    private String resolveEmail(String registrationId, OAuth2AuthenticationToken authToken, OAuth2User oAuth2User) {
+        String email = oAuth2User.getAttribute("email");
+        if (email != null && !email.isBlank()) {
+            return email;
+        }
+
+        if (!"github".equalsIgnoreCase(registrationId)) {
+            return null;
+        }
+
+        String login = oAuth2User.getAttribute("login");
+        String stableKey = (login == null || login.isBlank()) ? resolveProviderId(registrationId, oAuth2User) : login;
+        if (stableKey == null || stableKey.isBlank()) {
+            return null;
+        }
+
+        return stableKey + "@github.local";
+    }
+
+    private String resolveName(String registrationId, OAuth2User oAuth2User) {
+        String name = oAuth2User.getAttribute("name");
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+
+        if ("github".equalsIgnoreCase(registrationId)) {
+            String login = oAuth2User.getAttribute("login");
+            if (login != null && !login.isBlank()) {
+                return login;
+            }
+        }
+
+        return "Campus User";
+    }
+
+    private String resolveProviderId(String registrationId, OAuth2User oAuth2User) {
+        if ("github".equalsIgnoreCase(registrationId)) {
+            Object id = oAuth2User.getAttribute("id");
+            return id == null ? oAuth2User.getAttribute("login") : String.valueOf(id);
+        }
+
+        return oAuth2User.getAttribute("sub");
     }
 
     private void sendOAuthErrorRedirect(HttpServletRequest request,

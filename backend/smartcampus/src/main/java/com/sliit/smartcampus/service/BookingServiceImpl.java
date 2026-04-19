@@ -1,12 +1,19 @@
 package com.sliit.smartcampus.service;
 
 import com.sliit.smartcampus.dto.BookingRequest;
+import com.sliit.smartcampus.dto.BookingDecisionRequest;
 import com.sliit.smartcampus.dto.BookingResponse;
 import com.sliit.smartcampus.entity.Booking;
 import com.sliit.smartcampus.entity.Resource;
+import com.sliit.smartcampus.entity.User;
 import com.sliit.smartcampus.enums.BookingStatus;
+import com.sliit.smartcampus.enums.CampusNotificationType;
+import com.sliit.smartcampus.enums.UserRole;
+import com.sliit.smartcampus.exception.ForbiddenException;
+import com.sliit.smartcampus.exception.NotFoundException;
 import com.sliit.smartcampus.repository.BookingRepository;
 import com.sliit.smartcampus.repository.ResourceRepository;
+import com.sliit.smartcampus.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,15 +24,21 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
+    private final UserRepository userRepository;
+    private final TicketAuthorizationService ticketAuthorizationService;
+    private final CampusNotificationService campusNotificationService;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
                               ResourceRepository resourceRepository) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
+        this.userRepository = userRepository;
+        this.ticketAuthorizationService = ticketAuthorizationService;
+        this.campusNotificationService = campusNotificationService;
     }
 
     private BookingResponse convertToResponse(Booking booking) {
-        return new BookingResponse(
+        BookingResponse response = new BookingResponse(
                 booking.getId(),
                 booking.getResource() != null ? booking.getResource().getName() : null,
                 booking.getDate(),
@@ -35,6 +48,10 @@ public class BookingServiceImpl implements BookingService {
                 booking.getExpectedAttendees(),
                 booking.getStatus().name()
         );
+            response.setCreatedBy(booking.getCreatedBy());
+            response.setRejectionReason(booking.getRejectionReason());
+            response.setCreatedAt(booking.getCreatedAt() == null ? null : booking.getCreatedAt().toString());
+            return response;
     }
 
     @Override
@@ -55,8 +72,28 @@ public class BookingServiceImpl implements BookingService {
         booking.setPurpose(request.getPurpose());
         booking.setExpectedAttendees(request.getExpectedAttendees());
         booking.setStatus(BookingStatus.PENDING);
+        booking.setCreatedBy(actor.getEmail());
+        booking.setCreatedByUser(actor);
 
         Booking savedBooking = bookingRepository.save(booking);
+        campusNotificationService.notifyEmail(
+            actor.getEmail(),
+            actor.getRole(),
+            CampusNotificationType.BOOKING_REQUEST_SUBMITTED,
+            "Booking request submitted",
+            "Your booking for " + resource.getName() + " on " + request.getDate() + " is now pending review.",
+            "BOOKING",
+            savedBooking.getId()
+        );
+        campusNotificationService.notifyRole(
+            UserRole.ADMIN,
+            actor.getEmail(),
+            CampusNotificationType.BOOKING_REQUEST_SUBMITTED,
+            "New booking request",
+            actor.getEmail() + " requested a booking for " + resource.getName() + ".",
+            "BOOKING",
+            savedBooking.getId()
+        );
         return convertToResponse(savedBooking);
     }
 
@@ -71,14 +108,93 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingResponse getBookingById(Long id) {
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Booking not found with id: " + id));
         return convertToResponse(booking);
     }
 
     @Override
-    public void deleteBooking(Long id) {
+    public void deleteBooking(Long id, String actorEmail) {
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking not found with id: " + id));
-        bookingRepository.delete(booking);
+                .orElseThrow(() -> new NotFoundException("Booking not found with id: " + id));
+
+        User actor = ticketAuthorizationService.requireActor(actorEmail);
+        if (actor.getRole() != UserRole.ADMIN && (booking.getCreatedBy() == null || !booking.getCreatedBy().equalsIgnoreCase(actor.getEmail()))) {
+            throw new ForbiddenException("You are not allowed to cancel this booking");
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+
+        campusNotificationService.notifyEmail(
+            booking.getCreatedBy(),
+            booking.getCreatedByUser() != null ? booking.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.BOOKING_CANCELLED,
+            "Booking cancelled",
+            "Your booking for " + booking.getResource().getName() + " was cancelled.",
+            "BOOKING",
+            booking.getId()
+        );
+        campusNotificationService.notifyRole(
+            UserRole.ADMIN,
+            actor.getEmail(),
+            CampusNotificationType.BOOKING_CANCELLED,
+            "Booking cancelled",
+            "Booking #" + booking.getId() + " was cancelled by " + actor.getEmail() + ".",
+            "BOOKING",
+            booking.getId()
+        );
+    }
+
+    @Override
+    public BookingResponse approveBooking(Long id, String actorEmail) {
+        User actor = ticketAuthorizationService.requireActor(actorEmail);
+        if (actor.getRole() != UserRole.ADMIN) {
+            throw new ForbiddenException("Only ADMIN can approve bookings");
+        }
+
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new NotFoundException("Booking not found with id: " + id));
+
+        booking.setStatus(BookingStatus.APPROVED);
+        booking.setRejectionReason(null);
+        Booking saved = bookingRepository.save(booking);
+
+        campusNotificationService.notifyEmail(
+            booking.getCreatedBy(),
+            booking.getCreatedByUser() != null ? booking.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.BOOKING_APPROVED,
+            "Booking approved",
+            "Your booking for " + booking.getResource().getName() + " has been approved.",
+            "BOOKING",
+            booking.getId()
+        );
+        return convertToResponse(saved);
+    }
+
+    @Override
+    public BookingResponse rejectBooking(Long id, BookingDecisionRequest request, String actorEmail) {
+        User actor = ticketAuthorizationService.requireActor(actorEmail);
+        if (actor.getRole() != UserRole.ADMIN) {
+            throw new ForbiddenException("Only ADMIN can reject bookings");
+        }
+
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new NotFoundException("Booking not found with id: " + id));
+
+        booking.setStatus(BookingStatus.REJECTED);
+        booking.setRejectionReason(request.getReason() == null ? null : request.getReason().trim());
+        Booking saved = bookingRepository.save(booking);
+
+        String reason = booking.getRejectionReason();
+        campusNotificationService.notifyEmail(
+            booking.getCreatedBy(),
+            booking.getCreatedByUser() != null ? booking.getCreatedByUser().getRole() : actor.getRole(),
+            CampusNotificationType.BOOKING_REJECTED,
+            "Booking rejected",
+            "Your booking for " + booking.getResource().getName() + " was rejected" + (reason == null || reason.isBlank() ? "." : ": " + reason),
+            "BOOKING",
+            booking.getId()
+        );
+        return convertToResponse(saved);
     }
 }

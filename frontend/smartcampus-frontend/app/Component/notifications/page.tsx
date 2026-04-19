@@ -11,32 +11,43 @@ import {
 } from "../shared/SiteFrame";
 import {
   API_BASE_URL,
+  CampusNotification,
   fetchJson,
   getStoredUser,
-  TicketNotification,
   withActorHeaders,
 } from "../shared/campusApi";
 
+const filters = ["all", "unread", "tickets", "bookings"] as const;
+
 export default function NotificationsPage() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<TicketNotification[]>([]);
+  const [notifications, setNotifications] = useState<CampusNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("Loading notifications...");
+  const [message, setMessage] = useState("Loading unified notifications...");
+  const [filter, setFilter] = useState<(typeof filters)[number]>("all");
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      const data = await fetchJson<TicketNotification[]>(
-        `${API_BASE_URL}/tickets/notifications`,
+      const data = await fetchJson<CampusNotification[]>(
+        `${API_BASE_URL}/notifications`,
         withActorHeaders()
       );
       setNotifications(data);
-      setMessage("Notification feed synced.");
+      setMessage("Notification inbox synced with backend API.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to load notifications.");
+      const fallbackMessage =
+        caught instanceof Error && caught.message.toLowerCase().includes("failed to fetch")
+          ? "Backend is not reachable at http://localhost:8089. Start the backend before opening notifications."
+          : caught instanceof Error
+            ? caught.message
+            : "Unable to load notifications.";
+
+      setError(fallbackMessage);
+      setMessage("Notifications could not sync right now.");
     } finally {
       setLoading(false);
     }
@@ -52,20 +63,28 @@ export default function NotificationsPage() {
     void loadNotifications();
   }, [loadNotifications, router]);
 
+  useEffect(() => {
+    if (!getStoredUser()?.email) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadNotifications();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadNotifications]);
+
   async function markAsRead(notificationId: number) {
     try {
-      await fetchJson<TicketNotification>(
-        `${API_BASE_URL}/tickets/notifications/${notificationId}/read`,
-        withActorHeaders({
-          method: "PATCH",
-        })
+      await fetchJson<CampusNotification>(
+        `${API_BASE_URL}/notifications/${notificationId}/read`,
+        withActorHeaders({ method: "PATCH" })
       );
 
       setNotifications((current) =>
         current.map((notification) =>
-          notification.id === notificationId
-            ? { ...notification, read: true }
-            : notification
+          notification.id === notificationId ? { ...notification, read: true } : notification
         )
       );
     } catch (caught) {
@@ -78,13 +97,36 @@ export default function NotificationsPage() {
     [notifications]
   );
 
+  const filteredNotifications = useMemo(() => {
+    switch (filter) {
+      case "unread":
+        return notifications.filter((notification) => !notification.read);
+      case "tickets":
+        return notifications.filter((notification) => notification.relatedType === "TICKET");
+      case "bookings":
+        return notifications.filter((notification) => notification.relatedType === "BOOKING");
+      default:
+        return notifications;
+    }
+  }, [filter, notifications]);
+
+  const bookingCount = useMemo(
+    () => notifications.filter((notification) => notification.relatedType === "BOOKING").length,
+    [notifications]
+  );
+
+  const ticketCount = useMemo(
+    () => notifications.filter((notification) => notification.relatedType === "TICKET").length,
+    [notifications]
+  );
+
   return (
     <SiteFrame accent="mint">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
         <PageHero
           eyebrow="Notifications"
-          title="Ticket status changes and comment alerts in one notification feed."
-          description="Users receive updates whenever ticket status changes or new comments are added to their tickets."
+          title="One inbox for booking approvals, ticket updates, and comment activity."
+          description="Track role-specific alerts across USER, ADMIN, and TECHNICIAN workflows without leaving the dashboard shell."
           aside={
             <div className="grid gap-4">
               <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5">
@@ -99,45 +141,68 @@ export default function NotificationsPage() {
           }
         />
 
-        <section className="grid gap-4 md:grid-cols-3">
-          <MetricTile label="Total" value={String(notifications.length)} detail="All ticket-related notifications for the signed-in user" />
-          <MetricTile label="Unread" value={String(unreadCount)} detail="Status updates and new comments not yet acknowledged" />
-          <MetricTile label="Channel" value="Ticketing" detail="Maintenance and incident workflow notifications only" />
+        <section className="grid gap-4 md:grid-cols-4">
+          <MetricTile label="Total" value={String(notifications.length)} detail="All inbox entries for the signed-in user" />
+          <MetricTile label="Unread" value={String(unreadCount)} detail="Notifications waiting for acknowledgment" />
+          <MetricTile label="Bookings" value={String(bookingCount)} detail="Approval, rejection, and cancellation updates" />
+          <MetricTile label="Tickets" value={String(ticketCount)} detail="Status changes, comments, assignments, and resolution notes" />
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
           <GlassPanel>
             <SectionHeading
-              eyebrow="Notification Strategy"
-              title="Actionable ticket updates for end users."
+              eyebrow="Inbox Strategy"
+              title="Professional notification stream for all campus workflows."
               description={message}
             />
             {error ? <p className="mt-3 text-sm text-rose-600">{error}</p> : null}
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              {filters.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setFilter(item)}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                    filter === item
+                      ? "bg-stone-950 text-white"
+                      : "border border-stone-200 bg-white text-stone-600 hover:border-orange-200 hover:text-orange-900"
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
           </GlassPanel>
 
           <div className="grid gap-4">
-            {notifications.length === 0 && !loading ? (
+            {filteredNotifications.length === 0 && !loading ? (
               <GlassPanel>
                 <p className="text-sm text-stone-600">
-                  No notifications yet. Once someone comments on your ticket or updates its status,
-                  alerts will appear here.
+                  No notifications match this filter. When bookings, tickets, or comments change,
+                  they will appear here.
                 </p>
               </GlassPanel>
             ) : null}
 
-            {notifications.map((notification) => (
+            {filteredNotifications.map((notification) => (
               <GlassPanel key={notification.id}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h3 className="text-2xl font-semibold tracking-[-0.03em] text-stone-950">
-                      Ticket #{notification.ticketId}{" "}
-                      <span className="text-base font-medium text-stone-500">
-                        ({notification.type.replace("_", " ")})
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-xl font-semibold tracking-[-0.03em] text-stone-950">
+                        {notification.title}
+                      </h3>
+                      <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">
+                        {notification.relatedType}
                       </span>
-                    </h3>
+                      <span className="rounded-full bg-orange-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-800">
+                        {notification.type.replace(/_/g, " ")}
+                      </span>
+                    </div>
                     <p className="mt-3 text-sm leading-7 text-stone-600">{notification.message}</p>
                     <p className="mt-2 text-xs uppercase tracking-[0.18em] text-stone-400">
-                      {new Date(notification.createdAt).toLocaleString()}
+                      {notification.recipientRole} • {new Date(notification.createdAt).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -156,7 +221,7 @@ export default function NotificationsPage() {
                         onClick={() => void markAsRead(notification.id)}
                         className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
                       >
-                        Mark Read
+                        Mark read
                       </button>
                     ) : null}
                   </div>

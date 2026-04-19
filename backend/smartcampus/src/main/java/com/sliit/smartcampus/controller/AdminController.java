@@ -1,12 +1,14 @@
 package com.sliit.smartcampus.controller;
 
 import com.sliit.smartcampus.dto.AdminUserDto;
+import com.sliit.smartcampus.dto.AdminCreateUserRequest;
 import com.sliit.smartcampus.dto.AdminUserRoleUpdateRequest;
 import com.sliit.smartcampus.entity.User;
 import com.sliit.smartcampus.enums.UserRole;
 import com.sliit.smartcampus.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,6 +38,16 @@ public class AdminController {
         return userService.getAllUsers().stream()
             .map(AdminUserDto::fromUser)
             .toList();
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<?> createUser(@RequestBody AdminCreateUserRequest request) {
+        try {
+            User created = userService.createAdminUser(request);
+            return ResponseEntity.ok(AdminUserDto.fromUser(created));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PatchMapping("/users/{id}/role")
