@@ -29,10 +29,7 @@ public class BookingServiceImpl implements BookingService {
     private final CampusNotificationService campusNotificationService;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
-                             ResourceRepository resourceRepository,
-                             UserRepository userRepository,
-                             TicketAuthorizationService ticketAuthorizationService,
-                             CampusNotificationService campusNotificationService) {
+                              ResourceRepository resourceRepository) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
         this.userRepository = userRepository;
@@ -43,8 +40,7 @@ public class BookingServiceImpl implements BookingService {
     private BookingResponse convertToResponse(Booking booking) {
         BookingResponse response = new BookingResponse(
                 booking.getId(),
-                booking.getResource().getId(),
-                booking.getResource().getName(),
+                booking.getResource() != null ? booking.getResource().getName() : null,
                 booking.getDate(),
                 booking.getStartTime(),
                 booking.getEndTime(),
@@ -59,10 +55,14 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-            public BookingResponse createBooking(BookingRequest request, String actorEmail) {
-            User actor = ticketAuthorizationService.requireActor(actorEmail);
-        Resource resource = resourceRepository.findById(request.getResourceId())
-                .orElseThrow(() -> new NotFoundException("Resource not found with id: " + request.getResourceId()));
+    public BookingResponse createBooking(BookingRequest request) {
+        String resourceName = request.getResourceName() == null ? "" : request.getResourceName().trim();
+        if (resourceName.isEmpty()) {
+            throw new RuntimeException("Resource name is required");
+        }
+
+        Resource resource = resourceRepository.findFirstByNameIgnoreCase(resourceName)
+                .orElseThrow(() -> new RuntimeException("Resource not found: " + resourceName));
 
         Booking booking = new Booking();
         booking.setResource(resource);

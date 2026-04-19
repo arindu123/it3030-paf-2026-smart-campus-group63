@@ -1,21 +1,5 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Manrope, Sora } from "next/font/google";
 import "./globals.css";
-
-const headingFont = Sora({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const bodyFont = Manrope({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const monoFont = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "UniDesk",
@@ -30,7 +14,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${headingFont.variable} ${bodyFont.variable} ${monoFont.variable} h-full antialiased`}
+      className="h-full antialiased"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >

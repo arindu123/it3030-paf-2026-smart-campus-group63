@@ -16,7 +16,7 @@ public class Booking {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "resource_id", nullable = false)
+    @JoinColumn(name = "resource_id")
     private Resource resource;
 
     private LocalDate date;

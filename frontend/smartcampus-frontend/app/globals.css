@@ -18,6 +18,9 @@
   /* Accent colors */
   --accent: #ee9b13;
   --accent-hover: #d78a0f;
+  --font-geist-sans: "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-geist-mono: "Avenir Next", "Segoe UI", sans-serif;
+  --font-jetbrains-mono: "Consolas", "Courier New", monospace;
 }
 
 @theme inline {

@@ -129,7 +129,6 @@ export type Resource = {
 
 export type Booking = {
   id: number;
-  resourceId: number;
   date: string;
   startTime: string;
   endTime: string;
@@ -179,6 +178,7 @@ export type ResourceForm = {
 
 export type BookingForm = {
   resourceId: number;
+  resourceName: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -208,8 +208,9 @@ export const defaultResourceForm: ResourceForm = {
   status: "ACTIVE",
 };
 
-export const defaultBookingForm = (resourceId: number): BookingForm => ({
+export const defaultBookingForm = (resourceId: number, resourceName: string): BookingForm => ({
   resourceId,
+  resourceName,
   date: "",
   startTime: "",
   endTime: "",
