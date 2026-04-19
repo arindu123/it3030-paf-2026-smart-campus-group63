@@ -13,7 +13,6 @@ import com.sliit.smartcampus.exception.ForbiddenException;
 import com.sliit.smartcampus.exception.NotFoundException;
 import com.sliit.smartcampus.repository.BookingRepository;
 import com.sliit.smartcampus.repository.ResourceRepository;
-import com.sliit.smartcampus.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,15 +23,15 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
-    private final UserRepository userRepository;
     private final TicketAuthorizationService ticketAuthorizationService;
     private final CampusNotificationService campusNotificationService;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
-                              ResourceRepository resourceRepository) {
+                              ResourceRepository resourceRepository,
+                              TicketAuthorizationService ticketAuthorizationService,
+                              CampusNotificationService campusNotificationService) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
-        this.userRepository = userRepository;
         this.ticketAuthorizationService = ticketAuthorizationService;
         this.campusNotificationService = campusNotificationService;
     }
@@ -55,7 +54,9 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponse createBooking(BookingRequest request) {
+    public BookingResponse createBooking(BookingRequest request, String actorEmail) {
+        User actor = ticketAuthorizationService.requireActor(actorEmail);
+
         String resourceName = request.getResourceName() == null ? "" : request.getResourceName().trim();
         if (resourceName.isEmpty()) {
             throw new RuntimeException("Resource name is required");
