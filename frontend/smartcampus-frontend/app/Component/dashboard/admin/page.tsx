@@ -65,6 +65,15 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [newUserFullName, setNewUserFullName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPhoneNumber, setNewUserPhoneNumber] = useState("");
+  const [newUserDepartment, setNewUserDepartment] = useState("");
+  const [newUserRole, setNewUserRole] = useState<UserRole>("USER");
+  const [newUserProvider, setNewUserProvider] = useState<"LOCAL" | "GOOGLE">("GOOGLE");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserConfirmPassword, setNewUserConfirmPassword] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -286,6 +295,56 @@ export default function AdminDashboardPage() {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete resource.");
     } finally {
       setActiveResourceAction(null);
+    }
+  }
+
+  async function createUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    if (newUserProvider === "LOCAL" && newUserPassword !== newUserConfirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (newUserProvider === "LOCAL" && !newUserPassword) {
+      setError("Password is required for local accounts.");
+      return;
+    }
+
+    setCreatingUser(true);
+
+    try {
+      await fetchJson<AdminUser>(`${API_BASE_URL}/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: newUserFullName,
+          email: newUserEmail,
+          phoneNumber: newUserPhoneNumber,
+          department: newUserDepartment,
+          role: newUserRole,
+          provider: newUserProvider,
+          password: newUserProvider === "LOCAL" ? newUserPassword : undefined,
+        }),
+      });
+
+      setNewUserFullName("");
+      setNewUserEmail("");
+      setNewUserPhoneNumber("");
+      setNewUserDepartment("");
+      setNewUserRole("USER");
+      setNewUserProvider("GOOGLE");
+      setNewUserPassword("");
+      setNewUserConfirmPassword("");
+      setMessage("User account created successfully.");
+      await loadAdminData();
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Failed to create user account.");
+    } finally {
+      setCreatingUser(false);
     }
   }
 

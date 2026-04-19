@@ -75,10 +75,19 @@ export default function ResourcesPage() {
     }
 
     try {
+      const userJson = window.localStorage.getItem("smartcampusUser");
+      const userEmail = userJson ? (JSON.parse(userJson) as { email?: string }).email : "";
+
+      if (!userEmail) {
+        setBookingError("User email not found. Please log in again.");
+        return;
+      }
+
       await fetchJson(`${API_BASE_URL}/bookings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-User-Email": userEmail,
         },
         body: JSON.stringify({
           ...bookingForm,
