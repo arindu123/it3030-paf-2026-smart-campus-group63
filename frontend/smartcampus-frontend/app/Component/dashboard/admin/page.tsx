@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   API_BASE_URL,
   AdminUser,
+  Booking,
   defaultResourceForm,
   fetchJson,
   Resource,
@@ -133,6 +134,7 @@ function sanitizeCapacityInput(value: string) {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [currentAdminEmail, setCurrentAdminEmail] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [resourceForm, setResourceForm] = useState<ResourceForm>(defaultResourceForm);
@@ -165,9 +167,10 @@ export default function AdminDashboardPage() {
     }
 
     try {
-      const [usersData, resourceData] = await Promise.all([
+      const [usersData, resourceData, bookingData] = await Promise.all([
         fetch(`${API_BASE_URL}/admin/users`).then((response) => response.json() as Promise<AdminUser[]>),
         fetchJson<Resource[]>(`${API_BASE_URL}/resources`),
+        fetchJson<Booking[]>(`${API_BASE_URL}/bookings`),
       ]);
 
       const normalizedUsers = usersData.map((user) => ({
@@ -183,6 +186,7 @@ export default function AdminDashboardPage() {
           return accumulator;
         }, {})
       );
+      setBookings(bookingData);
       setRoleEdits(
         normalizedUsers.reduce<Record<number, UserRole>>((accumulator, user) => {
           accumulator[user.id] = user.role;
@@ -192,7 +196,7 @@ export default function AdminDashboardPage() {
       setLastUpdatedAt(new Date().toLocaleTimeString());
 
       if (!silent) {
-        setMessage("Admin dashboard synced with users and resources.");
+        setMessage("Admin dashboard synced with users, resources, and bookings.");
       }
     } catch {
       if (!silent) {
@@ -219,6 +223,7 @@ export default function AdminDashboardPage() {
         return;
       }
 
+      setCurrentAdminEmail(currentUser.email || "");
       setIsAuthorized(true);
     } catch {
       window.localStorage.removeItem("smartcampusUser");
@@ -246,14 +251,16 @@ export default function AdminDashboardPage() {
     const technicianCount = users.filter((user) => user.role === "TECHNICIAN").length;
     const onlineCount = users.filter((user) => user.online).length;
     const activeResourceCount = resources.filter((resource) => resource.status === "ACTIVE").length;
+    const pendingBookingCount = bookings.filter((booking) => booking.status === "PENDING").length;
 
     return {
       activeResourceCount,
       adminCount,
       technicianCount,
       onlineCount,
+      pendingBookingCount,
     };
-  }, [resources, users]);
+  }, [resources, users, bookings]);
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -293,6 +300,62 @@ export default function AdminDashboardPage() {
       await loadAdminData();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Role update failed");
+    } finally {
+      setActiveUserAction(null);
+    }
+  }
+
+  async function deactivateUser(userId: number) {
+    setActiveUserAction(userId);
+    setError("");
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      setActiveUserAction(null);
+      return;
+    }
+
+    try {
+      await fetchJson(`${API_BASE_URL}/admin/users/${userId}/deactivate`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": currentAdminEmail,
+        },
+      });
+
+      setMessage(`User #${userId} deactivated.`);
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to deactivate user.");
+    } finally {
+      setActiveUserAction(null);
+    }
+  }
+
+  async function activateUser(userId: number) {
+    setActiveUserAction(userId);
+    setError("");
+
+    if (!currentAdminEmail) {
+      setError("Admin email is missing. Please sign in again.");
+      setActiveUserAction(null);
+      return;
+    }
+
+    try {
+      await fetchJson(`${API_BASE_URL}/admin/users/${userId}/activate`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": currentAdminEmail,
+        },
+      });
+
+      setMessage(`User #${userId} activated.`);
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to activate user.");
     } finally {
       setActiveUserAction(null);
     }
@@ -532,6 +595,11 @@ export default function AdminDashboardPage() {
             label="Active Resources"
             value={String(overview.activeResourceCount)}
             detail="Resources currently available to campus users"
+          />
+          <MetricTile
+            label="Pending Bookings"
+            value={String(overview.pendingBookingCount)}
+            detail="Resource bookings awaiting admin approval"
           />
         </section>
 
@@ -834,6 +902,71 @@ export default function AdminDashboardPage() {
         </section>
 
         <section className="grid gap-6">
+          <Panel
+            eyebrow="Booking Approvals"
+            title="Manage resource booking requests"
+            description="Review and approve or reject pending booking requests from users."
+          >
+            <div className="space-y-4">
+              {bookings.filter((b) => b.status === "PENDING").length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-8 text-center text-sm text-stone-500">
+                  No pending bookings. All requests have been reviewed.
+                </div>
+              ) : (
+                bookings
+                  .filter((booking) => booking.status === "PENDING")
+                  .map((booking) => (
+                    <article
+                      key={booking.id}
+                      className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-xl font-semibold text-stone-950">
+                            {booking.resourceName || "Resource Booking"}
+                          </h3>
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            {booking.purpose}
+                          </p>
+                        </div>
+                        <span className="inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-yellow-800">
+                          PENDING
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-2 text-sm text-stone-600">
+                        <p>Requested by: {booking.createdBy}</p>
+                        <p>Date: {booking.date}</p>
+                        <p>Time: {booking.startTime} - {booking.endTime}</p>
+                        <p>Expected Attendees: {booking.expectedAttendees}</p>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <button
+                          className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={activeBookingAction === booking.id}
+                          onClick={() => void approveBooking(booking.id)}
+                          type="button"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={activeBookingAction === booking.id}
+                          onClick={() => openRejectModal(booking.id)}
+                          type="button"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </article>
+                  ))
+              )}
+            </div>
+          </Panel>
+        </section>
+
+        <section className="grid gap-6">
           <GlassPanel>
             <div className="rounded-3xl border border-stone-200 bg-stone-50/80 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1022,6 +1155,20 @@ export default function AdminDashboardPage() {
                           </button>
                           <button
                             type="button"
+                            disabled={activeUserAction === user.id || !currentAdminEmail}
+                            onClick={() =>
+                              void (
+                                user.status?.toUpperCase() === "DEACTIVATED"
+                                  ? activateUser(user.id)
+                                  : deactivateUser(user.id)
+                              )
+                            }
+                            className={`rounded-full px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${user.status?.toUpperCase() === "DEACTIVATED" ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}
+                          >
+                            {user.status?.toUpperCase() === "DEACTIVATED" ? "Activate" : "Deactivate"}
+                          </button>
+                          <button
+                            type="button"
                             disabled={activeUserAction === user.id}
                             onClick={() => void deleteUser(user.id)}
                             className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1034,6 +1181,9 @@ export default function AdminDashboardPage() {
                         <div className="flex flex-col gap-2">
                           <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.online ? "bg-orange-100 text-orange-800" : "bg-stone-100 text-stone-500"}`}>
                             {user.online ? "Online" : "Offline"}
+                          </span>
+                          <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.status?.toUpperCase() === "DEACTIVATED" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                            {user.status?.toUpperCase() === "DEACTIVATED" ? "Deactivated" : "Active"}
                           </span>
                           <p className="text-xs text-stone-500">
                             Last login: {formatUtcTimestamp(user.lastLoginAt)}
@@ -1056,6 +1206,53 @@ export default function AdminDashboardPage() {
             </div>
           </GlassPanel>
         </section>
+
+        {isRejectModalOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+              <h2 className="mb-2 text-2xl font-bold text-stone-950">Reject Booking</h2>
+              <p className="mb-4 text-sm text-stone-600">
+                Booking #{rejectingBookingId} - Please provide a reason for rejection
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-stone-700">
+                  Rejection Reason
+                  <textarea
+                    className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    rows={4}
+                    placeholder="Explain why this booking is being rejected..."
+                    value={rejectionReason}
+                    onChange={(event) => setRejectionReason(event.target.value)}
+                  />
+                </label>
+              </div>
+
+              {error && !error.includes("Admin email") ? (
+                <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  className="flex-1 rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
+                  type="button"
+                  onClick={() => void submitRejectBooking()}
+                >
+                  Reject Booking
+                </button>
+                <button
+                  className="flex-1 rounded-full bg-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200"
+                  type="button"
+                  onClick={closeRejectModal}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </SiteFrame>
   );

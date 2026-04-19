@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   AdminUser,
   API_BASE_URL,
+  BACKEND_BASE_URL,
   defaultTicketForm,
   fetchJson,
   getStoredUser,
@@ -18,6 +19,7 @@ import {
   TicketStatus,
   UserRole,
   withActorHeaders,
+  Resource,
 } from "../shared/campusApi";
 import {
   DashboardHero,
@@ -37,6 +39,7 @@ export default function TicketPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [statusFilter, setStatusFilter] = useState<"ALL" | TicketStatus>("ALL");
   const [technicians, setTechnicians] = useState<AdminUser[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
 
   const [ticketForm, setTicketForm] = useState<TicketForm>(defaultTicketForm);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -53,6 +56,10 @@ export default function TicketPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Ticket desk is ready.");
   const [error, setError] = useState("");
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string>("");
+  const [previewImageName, setPreviewImageName] = useState<string>("");
 
   const authFetchJson = useCallback(
     async <T,>(url: string, init?: RequestInit) => {
@@ -95,12 +102,26 @@ export default function TicketPage() {
     }
   }, [actorEmail, authFetchJson, statusFilter]);
 
+  const loadResources = useCallback(async () => {
+    if (!actorEmail) {
+      return;
+    }
+
+    try {
+      const resourceData = await authFetchJson<Resource[]>(`${API_BASE_URL}/resources`);
+      setResources(resourceData.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch {
+      setResources([]);
+    }
+  }, [actorEmail, authFetchJson]);
+
   useEffect(() => {
     if (!actorEmail) {
       return;
     }
     void loadTickets();
-  }, [actorEmail, loadTickets]);
+    void loadResources();
+  }, [actorEmail, loadTickets, loadResources]);
 
   useEffect(() => {
     if (actorRole !== "ADMIN" || !actorEmail) {
@@ -184,6 +205,7 @@ export default function TicketPage() {
 
       setTicketForm(defaultTicketForm);
       setSelectedFiles([]);
+      setIsTicketModalOpen(false);
       setMessage(
         selectedFiles.length > 0
           ? "Ticket created successfully with attachments."
@@ -421,6 +443,177 @@ export default function TicketPage() {
     return comment.owner.toLowerCase() === actorEmail.toLowerCase();
   }
 
+  const closeTicketModal = () => setIsTicketModalOpen(false);
+  const closePreview = () => setIsPreviewOpen(false);
+
+  const ticketFormModal = (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 px-4 py-8"
+      onClick={closeTicketModal}
+    >
+      <div
+        className="w-full max-w-4xl rounded-[2rem] border border-white/70 bg-white/95 p-6 shadow-[0_24px_80px_rgba(45,32,15,0.18)] backdrop-blur"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-500">
+              Ticket Form
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-stone-950">
+              Create a new ticket
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-stone-600">
+              Capture maintenance issues quickly and push them straight to the backend.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={closeTicketModal}
+            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+          >
+            Close
+          </button>
+        </div>
+
+        <Panel
+          eyebrow="Ticket Form"
+          title="Create a new ticket"
+          description="Capture maintenance issues quickly and push them straight to the backend."
+        >
+          <form className="grid gap-4" onSubmit={createTicket}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field
+                label="Title"
+                onChange={(value) => setTicketForm((current) => ({ ...current, title: value }))}
+                placeholder="Projector not working"
+                value={ticketForm.title}
+              />
+              <label className="grid gap-2 text-sm font-medium text-stone-700">
+                Created By
+                <input
+                  className="rounded-2xl border border-stone-200 bg-stone-100 px-4 py-3 text-sm text-stone-700 outline-none"
+                  readOnly
+                  value={actorEmail}
+                />
+              </label>
+            </div>
+
+            <TextAreaField
+              label="Description"
+              onChange={(value) =>
+                setTicketForm((current) => ({ ...current, description: value }))
+              }
+              placeholder="Describe the issue clearly"
+              value={ticketForm.description}
+            />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium text-stone-700">
+                Related Resource
+                <select
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 outline-none"
+                  value={ticketForm.relatedResourceId}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    const resource = resources.find((item) => String(item.id) === value);
+                    setTicketForm((current) => ({
+                      ...current,
+                      relatedResourceId: value,
+                      relatedResource: resource?.name || "",
+                    }));
+                  }}
+                >
+                  <option value="">Choose a resource</option>
+                  {resources.map((resource) => (
+                    <option key={resource.id} value={resource.id}>
+                      {resource.name} ({resource.type})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Field
+                label="Location"
+                onChange={(value) =>
+                  setTicketForm((current) => ({ ...current, relatedLocation: value }))
+                }
+                placeholder="Block A - 2nd Floor"
+                value={ticketForm.relatedLocation}
+              />
+            </div>
+
+            <Field
+              label="Related Resource ID (optional)"
+              onChange={(value) =>
+                setTicketForm((current) => ({ ...current, relatedResourceId: value }))
+              }
+              placeholder="e.g. 12"
+              value={ticketForm.relatedResourceId}
+            />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <SelectField
+                label="Priority"
+                onChange={(value) =>
+                  setTicketForm((current) => ({
+                    ...current,
+                    priority: value as (typeof ticketPriorities)[number],
+                  }))
+                }
+                options={ticketPriorities}
+                value={ticketForm.priority}
+              />
+              <SelectField
+                label="Category"
+                onChange={(value) =>
+                  setTicketForm((current) => ({
+                    ...current,
+                    category: value as (typeof ticketCategories)[number],
+                  }))
+                }
+                options={ticketCategories}
+                value={ticketForm.category}
+              />
+            </div>
+
+            <TextAreaField
+              label="Preferred Contact Details"
+              onChange={(value) =>
+                setTicketForm((current) => ({ ...current, preferredContactDetails: value }))
+              }
+              placeholder="Mobile / email / best time to call"
+              value={ticketForm.preferredContactDetails}
+            />
+
+            <label className="grid gap-2 text-sm font-medium text-stone-700">
+              Photos (max 3)
+              <input
+                accept="image/*"
+                className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 file:mr-3 file:rounded-full file:border-0 file:bg-stone-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-stone-700 hover:file:bg-stone-200"
+                multiple
+                onChange={handleFileSelection}
+                type="file"
+              />
+            </label>
+
+            {selectedFiles.length > 0 ? (
+              <p className="text-xs text-stone-600">
+                Selected: {selectedFiles.map((file) => file.name).join(", ")}
+              </p>
+            ) : null}
+
+            <button
+              className="mt-2 rounded-full border border-stone-300 bg-stone-100 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-200"
+              type="submit"
+            >
+              Save Ticket
+            </button>
+          </form>
+        </Panel>
+      </div>
+    </div>
+  );
+
   return (
     <SiteFrame accent="amber">
       <div className="mx-auto max-w-7xl">
@@ -430,6 +623,15 @@ export default function TicketPage() {
             error={error}
             message={message}
             onRefresh={() => void loadTickets()}
+            action={
+              <button
+                type="button"
+                onClick={() => setIsTicketModalOpen(true)}
+                className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+              >
+                Raise a ticket
+              </button>
+            }
             stats={[
               { label: "Tickets", value: String(tickets.length), tone: "warm" },
               { label: "Open", value: String(openTickets), tone: "cool" },
@@ -439,127 +641,7 @@ export default function TicketPage() {
             title="Manage campus tickets from one focused workspace."
           />
 
-          <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]" suppressHydrationWarning>
-            <Panel
-              eyebrow="Ticket Form"
-              title="Create a new ticket"
-              description="Capture maintenance issues quickly and push them straight to the backend."
-            >
-              <form className="grid gap-4" onSubmit={createTicket}>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field
-                    label="Title"
-                    onChange={(value) => setTicketForm((current) => ({ ...current, title: value }))}
-                    placeholder="Projector not working"
-                    value={ticketForm.title}
-                  />
-                  <label className="grid gap-2 text-sm font-medium text-stone-700">
-                    Created By
-                    <input
-                      className="rounded-2xl border border-stone-200 bg-stone-100 px-4 py-3 text-sm text-stone-700 outline-none"
-                      readOnly
-                      value={actorEmail}
-                    />
-                  </label>
-                </div>
-
-                <TextAreaField
-                  label="Description"
-                  onChange={(value) =>
-                    setTicketForm((current) => ({ ...current, description: value }))
-                  }
-                  placeholder="Describe the issue clearly"
-                  value={ticketForm.description}
-                />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field
-                    label="Related Resource"
-                    onChange={(value) =>
-                      setTicketForm((current) => ({ ...current, relatedResource: value }))
-                    }
-                    placeholder="Projector / Lab 3"
-                    value={ticketForm.relatedResource}
-                  />
-                  <Field
-                    label="Location"
-                    onChange={(value) =>
-                      setTicketForm((current) => ({ ...current, relatedLocation: value }))
-                    }
-                    placeholder="Block A - 2nd Floor"
-                    value={ticketForm.relatedLocation}
-                  />
-                </div>
-
-                <Field
-                  label="Related Resource ID (optional)"
-                  onChange={(value) =>
-                    setTicketForm((current) => ({ ...current, relatedResourceId: value }))
-                  }
-                  placeholder="e.g. 12"
-                  value={ticketForm.relatedResourceId}
-                />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <SelectField
-                    label="Priority"
-                    onChange={(value) =>
-                      setTicketForm((current) => ({
-                        ...current,
-                        priority: value as (typeof ticketPriorities)[number],
-                      }))
-                    }
-                    options={ticketPriorities}
-                    value={ticketForm.priority}
-                  />
-                  <SelectField
-                    label="Category"
-                    onChange={(value) =>
-                      setTicketForm((current) => ({
-                        ...current,
-                        category: value as (typeof ticketCategories)[number],
-                      }))
-                    }
-                    options={ticketCategories}
-                    value={ticketForm.category}
-                  />
-                </div>
-
-                <TextAreaField
-                  label="Preferred Contact Details"
-                  onChange={(value) =>
-                    setTicketForm((current) => ({ ...current, preferredContactDetails: value }))
-                  }
-                  placeholder="Mobile / email / best time to call"
-                  value={ticketForm.preferredContactDetails}
-                />
-
-                <label className="grid gap-2 text-sm font-medium text-stone-700">
-                  Photos (max 3)
-                  <input
-                    accept="image/*"
-                    className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 file:mr-3 file:rounded-full file:border-0 file:bg-stone-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-stone-700 hover:file:bg-stone-200"
-                    multiple
-                    onChange={handleFileSelection}
-                    type="file"
-                  />
-                </label>
-
-                {selectedFiles.length > 0 ? (
-                  <p className="text-xs text-stone-600">
-                    Selected: {selectedFiles.map((file) => file.name).join(", ")}
-                  </p>
-                ) : null}
-
-                <button
-                  className="mt-2 rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-105"
-                  type="submit"
-                >
-                  Save Ticket
-                </button>
-              </form>
-            </Panel>
-
+          <section className="grid gap-8" suppressHydrationWarning>
             <Panel
               eyebrow="Tickets"
               title="Current ticket queue"
@@ -619,22 +701,30 @@ export default function TicketPage() {
                           {ticket.attachments?.length ? (
                             <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                               {ticket.attachments.map((attachment) => (
-                                <div
+                                <button
                                   key={attachment.id}
-                                  className="overflow-hidden rounded-xl border border-stone-200 bg-white"
+                                  type="button"
+                                  onClick={() => {
+                                    setPreviewImageUrl(`${BACKEND_BASE_URL}${attachment.downloadUrl}`);
+                                    setPreviewImageName(attachment.fileName);
+                                    setIsPreviewOpen(true);
+                                  }}
+                                  className="group overflow-hidden rounded-3xl border border-stone-200 bg-white p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                                 >
-                                  <img
-                                    alt={attachment.fileName}
-                                    className="h-28 w-full bg-stone-100 object-cover"
-                                    src={`${API_BASE_URL}/tickets/attachments/${attachment.id}/file`}
-                                  />
-                                  <p
-                                    className="truncate px-2 py-1 text-xs text-stone-600"
-                                    title={attachment.fileName}
-                                  >
-                                    {attachment.fileName}
-                                  </p>
-                                </div>
+                                  <div className="relative overflow-hidden bg-stone-100">
+                                    <img
+                                      alt={attachment.fileName}
+                                      className="h-40 w-full object-cover transition duration-300 group-hover:scale-105"
+                                      src={`${BACKEND_BASE_URL}${attachment.downloadUrl}`}
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" />
+                                  </div>
+                                  <div className="px-3 py-2">
+                                    <p className="truncate text-sm font-medium text-stone-900">
+                                      {attachment.fileName}
+                                    </p>
+                                  </div>
+                                </button>
                               ))}
                             </div>
                           ) : (
@@ -676,7 +766,7 @@ export default function TicketPage() {
                               <button
                                 type="button"
                                 onClick={() => void addProgressUpdate(ticket.id)}
-                                className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                                className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-50"
                               >
                                 Add
                               </button>
@@ -770,7 +860,7 @@ export default function TicketPage() {
                             <button
                               type="button"
                               onClick={() => void addComment(ticket.id)}
-                              className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                              className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-50"
                             >
                               Post
                             </button>
@@ -781,7 +871,7 @@ export default function TicketPage() {
                       <div className="mt-5 flex flex-wrap gap-3">
                         {canManageTicket(ticket) && ticket.status === "OPEN" ? (
                           <button
-                            className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
                             onClick={() => void updateTicketStatus(ticket.id, "IN_PROGRESS")}
                             type="button"
                           >
@@ -791,7 +881,7 @@ export default function TicketPage() {
 
                         {canManageTicket(ticket) && ticket.status === "IN_PROGRESS" ? (
                           <button
-                            className="rounded-full bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600"
+                            className="rounded-full border border-emerald-300 bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50"
                             onClick={() => void updateTicketStatus(ticket.id, "RESOLVED")}
                             type="button"
                           >
@@ -801,7 +891,7 @@ export default function TicketPage() {
 
                         {actorRole === "ADMIN" && ticket.status === "RESOLVED" ? (
                           <button
-                            className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+                            className="rounded-full border border-emerald-300 bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-50"
                             onClick={() => void updateTicketStatus(ticket.id, "CLOSED")}
                             type="button"
                           >
@@ -829,7 +919,7 @@ export default function TicketPage() {
                               ))}
                             </select>
                             <button
-                              className="rounded-full bg-emerald-800 px-4 py-2 text-xs font-medium text-white transition hover:bg-emerald-700"
+                              className="rounded-full border border-emerald-300 bg-emerald-100 px-4 py-2 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50"
                               onClick={() => void assignTech(ticket.id)}
                               type="button"
                             >
@@ -852,7 +942,7 @@ export default function TicketPage() {
                               className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs"
                             />
                             <button
-                              className="rounded-full bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-400"
+                              className="rounded-full border border-orange-300 bg-orange-100 px-3 py-1.5 text-xs font-medium text-orange-800 transition hover:bg-orange-50"
                               onClick={() => void addResolutionNote(ticket.id)}
                               type="button"
                             >
@@ -875,7 +965,7 @@ export default function TicketPage() {
                               className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs"
                             />
                             <button
-                              className="rounded-full bg-rose-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-600"
+                              className="rounded-full border border-rose-300 bg-rose-100 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
                               onClick={() => void rejectTicket(ticket.id)}
                               type="button"
                             >
@@ -886,7 +976,7 @@ export default function TicketPage() {
 
                         {(actorRole === "ADMIN" || (ticket.createdBy === actorEmail && ticket.status === "OPEN")) ? (
                           <button
-                            className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
+                            className="rounded-full border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
                             onClick={() => void deleteTicket(ticket.id)}
                             type="button"
                           >
@@ -900,6 +990,34 @@ export default function TicketPage() {
               </div>
             </Panel>
           </section>
+          {isPreviewOpen ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+              onClick={closePreview}
+            >
+              <div
+                className="relative max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[2rem] bg-stone-950"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-900 shadow-sm transition hover:bg-white"
+                >
+                  ×
+                </button>
+                <img
+                  alt={previewImageName}
+                  src={previewImageUrl}
+                  className="h-[80vh] w-full object-contain bg-black"
+                />
+                <div className="border-t border-white/10 bg-white/95 px-4 py-3 text-sm text-stone-700">
+                  {previewImageName}
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {isTicketModalOpen ? ticketFormModal : null}
       </div>
     </SiteFrame>
   );

@@ -45,6 +45,7 @@ public class GoogleOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
             AuthProvider provider = "github".equalsIgnoreCase(registrationId) ? AuthProvider.GITHUB : AuthProvider.GOOGLE;
 
             String email = resolveEmail(registrationId, authToken, oAuth2User);
+            email = email == null ? null : email.trim();
             String name = resolveName(registrationId, oAuth2User);
             String providerId = resolveProviderId(registrationId, oAuth2User);
 

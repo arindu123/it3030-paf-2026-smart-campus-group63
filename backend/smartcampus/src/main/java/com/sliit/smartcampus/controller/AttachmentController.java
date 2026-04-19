@@ -52,7 +52,7 @@ public class AttachmentController {
 
     @GetMapping("/attachments/{attachmentId}/file")
     public ResponseEntity<Resource> getAttachmentFile(@PathVariable Long attachmentId,
-                                                      @RequestHeader(ACTOR_HEADER) String actorEmail) throws IOException {
+                                                      @RequestHeader(value = ACTOR_HEADER, required = false) String actorEmail) throws IOException {
         Attachment attachment = attachmentService.getAttachmentById(attachmentId, actorEmail);
         Path path = Paths.get(attachment.getFilePath());
 

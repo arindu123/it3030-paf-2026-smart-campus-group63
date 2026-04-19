@@ -57,11 +57,37 @@ const workflow = [
 export default function HomePage() {
   return (
     <SiteFrame accent="orange">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
-        <PageHero
+      <div className="-mt-8 flex w-full flex-col gap-10">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-10">
+          <PageHero
           eyebrow="Campus Control"
           title="Run campus resources, requests, and support from one polished hub."
           description="UniDesk brings together resource discovery, booking coordination, support tickets, and role-based dashboards in a unified operational experience."
+          containerClassName="!rounded-none"
+          backgroundContent={
+            <>
+              <div
+                className="absolute inset-0 scale-105 bg-cover bg-center opacity-50"
+                style={{ backgroundImage: "url('/image1.png')", animation: "homeHeroImageA 14s ease-in-out infinite" }}
+              />
+              <div
+                className="absolute inset-0 scale-105 bg-cover bg-center opacity-45"
+                style={{ backgroundImage: "url('/image2.png')", animation: "homeHeroImageB 14s ease-in-out infinite" }}
+              />
+              <div
+                className="absolute inset-0 scale-105 bg-cover bg-center opacity-40"
+                style={{ backgroundImage: "url('/image3.jpg')", animation: "homeHeroImageC 14s ease-in-out infinite" }}
+              />
+              <div
+                className="absolute inset-0 scale-105 bg-cover bg-center opacity-35"
+                style={{ backgroundImage: "url('/image4.jpg')", animation: "homeHeroImageD 14s ease-in-out infinite" }}
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(118deg,rgba(255,255,255,0.93),rgba(255,255,255,0.72)_52%,rgba(8,33,86,0.30))]" />
+            </>
+          }
+          gridClassName="gap-0"
+          asidePanelClassName="!rounded-none bg-transparent border-l border-white/20"
+          asideContentClassName="h-full"
           actions={
             <>
               <Link
@@ -79,34 +105,38 @@ export default function HomePage() {
             </>
           }
           aside={
-            <div className="flex h-full flex-col justify-between gap-6">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-orange-600">Operations Pulse</p>
-                <h3 className="mt-4 max-w-sm text-3xl font-semibold tracking-[-0.04em]">
-                  Designed for admins, technicians, staff, and students.
-                </h3>
-              </div>
+            <div className="relative flex h-full min-h-[500px] flex-col justify-between gap-6 p-6 text-slate-50 sm:p-8 lg:min-h-[540px]">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-orange-200">Operations Pulse</p>
+                  <h3 className="mt-4 max-w-sm text-3xl font-semibold tracking-[-0.04em] text-white">
+                    Designed for admins, technicians, staff, and students.
+                  </h3>
+                </div>
 
-              <div className="grid gap-4">
-                <div className="float-gentle rounded-[1.5rem] border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Services</p>
-                  <p className="mt-3 text-4xl font-semibold">4</p>
-                  <p className="mt-2 text-sm text-slate-200">Resource access, bookings, tickets, and updates.</p>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                    <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Availability</p>
-                    <p className="mt-3 text-2xl font-semibold">Live</p>
+                <div className="grid gap-4">
+                  <div className="float-gentle rounded-[1.5rem] border border-white/20 bg-white/16 p-5 shadow-lg backdrop-blur-sm">
+                    <p className="text-xs uppercase tracking-[0.28em] text-orange-200">Services</p>
+                    <p className="mt-3 text-4xl font-semibold text-white">4</p>
+                    <p className="mt-2 text-sm text-slate-100">Resource access, bookings, tickets, and updates.</p>
                   </div>
-                  <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                    <p className="text-xs uppercase tracking-[0.28em] text-orange-600">Support</p>
-                    <p className="mt-3 text-2xl font-semibold">Tracked</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-[1.5rem] border border-white/20 bg-white/16 p-5 backdrop-blur-sm">
+                      <p className="text-xs uppercase tracking-[0.28em] text-orange-200">Availability</p>
+                      <p className="mt-3 text-2xl font-semibold text-white">Live</p>
+                    </div>
+                    <div className="rounded-[1.5rem] border border-white/20 bg-white/16 p-5 backdrop-blur-sm">
+                      <p className="text-xs uppercase tracking-[0.28em] text-orange-200">Support</p>
+                      <p className="mt-3 text-2xl font-semibold text-white">Tracked</p>
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
           }
         />
+
+        </div>
+
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
 
         <section className="grid gap-4 md:grid-cols-3">
           <MetricTile
@@ -208,6 +238,7 @@ export default function HomePage() {
             </div>
           </GlassPanel>
         </section>
+        </div>
       </div>
     </SiteFrame>
   );

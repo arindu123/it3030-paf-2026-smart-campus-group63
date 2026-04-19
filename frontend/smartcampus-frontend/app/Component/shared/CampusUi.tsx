@@ -15,6 +15,7 @@ export function DashboardHero({
   stats,
   message,
   error,
+  action,
   onRefresh,
 }: Readonly<{
   eyebrow: string;
@@ -23,11 +24,12 @@ export function DashboardHero({
   stats: HeroStat[];
   message: string;
   error: string;
+  action?: ReactNode;
   onRefresh: () => void;
 }>) {
   return (
     <section className="mb-8 overflow-hidden rounded-[2.2rem] border border-white/60 bg-white/78 p-6 shadow-[0_24px_80px_rgba(45,32,15,0.13)] backdrop-blur md:p-8">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <p className="mb-3 text-sm font-semibold uppercase tracking-[0.32em] text-orange-600">
             {eyebrow}
@@ -40,13 +42,16 @@ export function DashboardHero({
           </p>
         </div>
 
-        <button
-          className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-900/20 transition hover:brightness-105"
-          onClick={onRefresh}
-          type="button"
-        >
-          Refresh Data
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {action}
+          <button
+            className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#d97706,#b45309)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-900/20 transition hover:brightness-105"
+            onClick={onRefresh}
+            type="button"
+          >
+            Refresh Data
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
