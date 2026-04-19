@@ -2,12 +2,26 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { API_BASE_URL, BookingForm, defaultBookingForm, fetchJson, Resource } from "../shared/campusApi";
+import {
+  API_BASE_URL,
+  BookingForm,
+  defaultBookingForm,
+  fetchJson,
+  getStoredUser,
+  normalizeRole,
+  Resource,
+  UserRole,
+} from "../shared/campusApi";
 import { DashboardHero, EmptyState, Panel } from "../shared/CampusUi";
 import { SiteFrame } from "../shared/SiteFrame";
+import { AdminOperationsSidebar } from "../shared/AdminOperationsSidebar";
+
+type ResourceStatusFilter = "ALL" | "ACTIVE" | "OUT_OF_SERVICE";
 
 export default function ResourcesPage() {
   const router = useRouter();
+  const [actorRole, setActorRole] = useState<UserRole>("USER");
+  const [actorName, setActorName] = useState("Campus Admin");
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Backend connected. Showing live campus resource availability.");
@@ -16,6 +30,7 @@ export default function ResourcesPage() {
   const [bookingForm, setBookingForm] = useState<BookingForm>(defaultBookingForm(0, ""));
   const [bookingError, setBookingError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ResourceStatusFilter>("ALL");
 
   const loadResources = useCallback(async () => {
     setLoading(true);
@@ -30,6 +45,16 @@ export default function ResourcesPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const storedUser = getStoredUser();
+    if (!storedUser?.email) {
+      return;
+    }
+
+    setActorRole(normalizeRole(storedUser.role));
+    setActorName(storedUser.fullName?.trim() || storedUser.email);
   }, []);
 
   useEffect(() => {
@@ -54,7 +79,13 @@ export default function ResourcesPage() {
     event.preventDefault();
     setBookingError("");
 
-    if (!bookingForm.date || !bookingForm.startTime || !bookingForm.endTime || !bookingForm.purpose || !bookingForm.expectedAttendees) {
+    if (
+      !bookingForm.date ||
+      !bookingForm.startTime ||
+      !bookingForm.endTime ||
+      !bookingForm.purpose ||
+      !bookingForm.expectedAttendees
+    ) {
       setBookingError("Please fill in all fields.");
       return;
     }
@@ -103,99 +134,184 @@ export default function ResourcesPage() {
     }
   }
 
+  const isAdmin = actorRole === "ADMIN";
   const activeResources = resources.filter((resource) => resource.status === "ACTIVE").length;
+  const outOfServiceResources = resources.filter((resource) => resource.status === "OUT_OF_SERVICE").length;
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredResources = resources.filter((resource) => {
+    const normalizedStatus = resource.status?.toUpperCase() || "";
+    if (statusFilter !== "ALL" && normalizedStatus !== statusFilter) {
+      return false;
+    }
+
     if (!normalizedSearchTerm) {
       return true;
     }
 
     return [resource.name, resource.type, resource.location, resource.description, resource.status]
-      .filter(Boolean)
+      .filter((value): value is string => Boolean(value))
       .some((value) => value.toLowerCase().includes(normalizedSearchTerm));
   });
 
   return (
-    <SiteFrame accent="sky">
-      <div className="mx-auto max-w-7xl">
-        <DashboardHero
-          description="Browse current campus resource availability from one clean overview while admin resource management stays inside the admin dashboard."
-          eyebrow="UniDesk Resource Desk"
-          error={error}
-          message={message}
-          onRefresh={() => void loadResources()}
-          stats={[
-            { label: "Resources", value: String(resources.length), tone: "cool" },
-            { label: "Active", value: String(activeResources), tone: "warm" },
-            { label: "Backend", value: loading ? "Syncing" : "Online", tone: "dark" },
-          ]}
-          title="Availability overview for campus resources."
-        />
+    <SiteFrame accent={isAdmin ? "sky" : "sky"}>
+      <div className={`mx-auto w-full ${isAdmin ? "max-w-[1520px]" : "max-w-7xl"}`}>
+        <div className={isAdmin ? "grid gap-6 lg:grid-cols-[270px_minmax(0,1fr)]" : ""}>
+          {isAdmin ? <AdminOperationsSidebar actorName={actorName} activeSection="resources" /> : null}
 
-        <section className="grid gap-8" suppressHydrationWarning>
-          <Panel
-            eyebrow="Resources"
-            title="Availability overview"
-            description="See which labs, rooms, and equipment are currently available."
-          >
-            <label className="mb-5 block text-sm font-medium text-stone-700">
-              Search resources
-              <input
-                className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by name, type, location, or status"
-                type="search"
-                value={searchTerm}
-              />
-            </label>
-
-            <div className="space-y-4">
-              {resources.length === 0 ? (
-                <EmptyState text="No resources are available right now." />
-              ) : filteredResources.length === 0 ? (
-                <EmptyState text="No resources match your search." />
-              ) : (
-                filteredResources.map((resource) => (
-                  <article
-                    key={resource.id}
-                    className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
+          <div className={isAdmin ? "space-y-6" : ""}>
+            {isAdmin ? (
+              <>
+                <section className="rounded-[2rem] bg-[linear-gradient(135deg,#252d83_0%,#1f2677_100%)] px-7 py-8 text-white shadow-[0_24px_70px_rgba(27,33,100,0.30)]">
+                  <h1 className="text-4xl font-semibold tracking-[-0.03em]">Admin Resource Management</h1>
+                  <p className="mt-3 max-w-3xl text-base text-blue-100">
+                    Review all campus resources, track current availability, and monitor operational status from one panel.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void loadResources()}
+                    className="mt-6 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-xl font-semibold text-stone-950">{resource.name}</h3>
-                        <p className="mt-2 text-sm leading-6 text-stone-600">
-                          {resource.description}
-                        </p>
-                      </div>
-                      <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
-                        {resource.status}
-                      </span>
-                    </div>
+                    Refresh Resources
+                  </button>
+                </section>
 
-                    <div className="mt-4 grid gap-2 text-sm text-stone-600">
-                      <p>Type: {resource.type}</p>
-                      <p>Capacity: {resource.capacity}</p>
-                      <p>Location: {resource.location}</p>
-                      <p>
-                        Available: {resource.availableFrom} - {resource.availableTo}
-                      </p>
-                    </div>
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Total Resources</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">{resources.length}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Active</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">{activeResources}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Out of Service</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">{outOfServiceResources}</p>
+                  </div>
+                  <div className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Backend</p>
+                    <p className="mt-3 text-5xl font-semibold tracking-[-0.04em] text-[#1f2677]">
+                      {loading ? "Syncing" : "Online"}
+                    </p>
+                  </div>
+                </section>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button
-                        className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
-                        onClick={() => openBookingModal(resource.id, resource.name)}
-                        type="button"
+                <section className="rounded-[1.7rem] border border-white/70 bg-white/90 p-6 shadow-sm">
+                  <h2 className="text-4xl font-semibold tracking-[-0.03em] text-[#1f2677]">Filter and Search</h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Search resources by name, type, location, or description and narrow by current status.
+                  </p>
+                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                      Search
+                      <input
+                        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#1f2677]/40 focus:ring-4 focus:ring-[#1f2677]/10"
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Search resources..."
+                        type="search"
+                        value={searchTerm}
+                      />
+                    </label>
+                    <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                      Status
+                      <select
+                        value={statusFilter}
+                        onChange={(event) => setStatusFilter(event.target.value as ResourceStatusFilter)}
+                        className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#1f2677]/40 focus:ring-4 focus:ring-[#1f2677]/10"
                       >
-                        Book
-                      </button>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </Panel>
-        </section>
+                        <option value="ALL">ALL</option>
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
+              </>
+            ) : (
+              <DashboardHero
+                description="Browse current campus resource availability from one clean overview while admin resource management stays inside the admin dashboard."
+                eyebrow="UniDesk Resource Desk"
+                error={error}
+                message={message}
+                onRefresh={() => void loadResources()}
+                stats={[
+                  { label: "Resources", value: String(resources.length), tone: "cool" },
+                  { label: "Active", value: String(activeResources), tone: "warm" },
+                  { label: "Backend", value: loading ? "Syncing" : "Online", tone: "dark" },
+                ]}
+                title="Availability overview for campus resources."
+              />
+            )}
+
+            <section className="grid gap-8" suppressHydrationWarning>
+              <Panel
+                eyebrow="Resources"
+                title="Availability overview"
+                description="See which labs, rooms, and equipment are currently available."
+              >
+                {!isAdmin ? (
+                  <label className="mb-5 block text-sm font-medium text-stone-700">
+                    Search resources
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Search by name, type, location, or status"
+                      type="search"
+                      value={searchTerm}
+                    />
+                  </label>
+                ) : null}
+
+                <div className="space-y-4">
+                  {resources.length === 0 ? (
+                    <EmptyState text="No resources are available right now." />
+                  ) : filteredResources.length === 0 ? (
+                    <EmptyState text="No resources match your filters." />
+                  ) : (
+                    filteredResources.map((resource) => (
+                      <article
+                        key={resource.id}
+                        className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-xl font-semibold text-stone-950">{resource.name}</h3>
+                            <p className="mt-2 text-sm leading-6 text-stone-600">
+                              {resource.description}
+                            </p>
+                          </div>
+                          <span className="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-800">
+                            {resource.status}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 grid gap-2 text-sm text-stone-600">
+                          <p>Type: {resource.type}</p>
+                          <p>Capacity: {resource.capacity}</p>
+                          <p>Location: {resource.location}</p>
+                          <p>
+                            Available: {resource.availableFrom} - {resource.availableTo}
+                          </p>
+                        </div>
+
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          <button
+                            className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
+                            onClick={() => openBookingModal(resource.id, resource.name)}
+                            type="button"
+                          >
+                            Book
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </Panel>
+            </section>
+          </div>
+        </div>
 
         {isBookingModalOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
