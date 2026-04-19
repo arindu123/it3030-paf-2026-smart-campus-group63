@@ -149,6 +149,7 @@ export type AdminUser = {
   phoneNumber: string;
   department: string;
   role: UserRole;
+  status?: string;
   provider?: string;
   lastLoginAt?: string | null;
   lastSeenAt?: string | null;

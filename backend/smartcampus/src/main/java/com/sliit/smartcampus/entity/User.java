@@ -36,6 +36,21 @@ public class User {
     @Column(nullable = false)
     private String department;
 
+    @Column(nullable = true)
+    private String profilePhotoUrl;
+
+    @Column(nullable = true)
+    private String address;
+
+    @Column(nullable = true)
+    private String preferredContactMethod;
+
+    @Column(nullable = false)
+    private Boolean notificationEnabled = true;
+
+    @Column(nullable = false)
+    private String status = "ACTIVE";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -99,6 +114,46 @@ public class User {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getPreferredContactMethod() {
+        return preferredContactMethod;
+    }
+
+    public void setPreferredContactMethod(String preferredContactMethod) {
+        this.preferredContactMethod = preferredContactMethod;
+    }
+
+    public Boolean getNotificationEnabled() {
+        return notificationEnabled;
+    }
+
+    public void setNotificationEnabled(Boolean notificationEnabled) {
+        this.notificationEnabled = notificationEnabled;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public UserRole getRole() {

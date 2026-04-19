@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { API_BASE_URL, AdminUser, UserRole, userRoles } from "../../shared/campusApi";
+import { API_BASE_URL, ACTOR_EMAIL_HEADER, AdminUser, UserRole, userRoles } from "../../shared/campusApi";
 import { GlassPanel, MetricTile, PageHero, SiteFrame } from "../../shared/SiteFrame";
 
 type StoredUser = {
@@ -59,6 +59,7 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentAdminEmail, setCurrentAdminEmail] = useState("");
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -115,6 +116,7 @@ export default function AdminDashboardPage() {
         return;
       }
 
+      setCurrentAdminEmail(currentUser.email || "");
       setIsAuthorized(true);
     } catch {
       window.localStorage.removeItem("smartcampusUser");
@@ -210,6 +212,58 @@ export default function AdminDashboardPage() {
       await loadAdminData();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "User delete failed");
+    } finally {
+      setActiveUserAction(null);
+    }
+  }
+
+  async function deactivateUser(userId: number) {
+    setActiveUserAction(userId);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/deactivate`, {
+        method: "PATCH",
+        headers: {
+          [ACTOR_EMAIL_HEADER]: currentAdminEmail,
+        },
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ message: "User deactivation failed" }));
+        throw new Error(body.message || "User deactivation failed");
+      }
+
+      setMessage("User deactivated successfully.");
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "User deactivation failed");
+    } finally {
+      setActiveUserAction(null);
+    }
+  }
+
+  async function activateUser(userId: number) {
+    setActiveUserAction(userId);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/activate`, {
+        method: "PATCH",
+        headers: {
+          [ACTOR_EMAIL_HEADER]: currentAdminEmail,
+        },
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ message: "User activation failed" }));
+        throw new Error(body.message || "User activation failed");
+      }
+
+      setMessage("User activated successfully.");
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "User activation failed");
     } finally {
       setActiveUserAction(null);
     }
@@ -510,6 +564,20 @@ export default function AdminDashboardPage() {
                           </button>
                           <button
                             type="button"
+                            disabled={activeUserAction === user.id || !currentAdminEmail}
+                            onClick={() =>
+                              void (
+                                user.status?.toUpperCase() === "DEACTIVATED"
+                                  ? activateUser(user.id)
+                                  : deactivateUser(user.id)
+                              )
+                            }
+                            className={`rounded-full px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${user.status?.toUpperCase() === "DEACTIVATED" ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}
+                          >
+                            {user.status?.toUpperCase() === "DEACTIVATED" ? "Activate" : "Deactivate"}
+                          </button>
+                          <button
+                            type="button"
                             disabled={activeUserAction === user.id}
                             onClick={() => void deleteUser(user.id)}
                             className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -522,6 +590,9 @@ export default function AdminDashboardPage() {
                         <div className="flex flex-col gap-2">
                           <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.online ? "bg-orange-100 text-orange-800" : "bg-stone-100 text-stone-500"}`}>
                             {user.online ? "Online" : "Offline"}
+                          </span>
+                          <span className={`inline-flex w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${user.status?.toUpperCase() === "DEACTIVATED" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                            {user.status?.toUpperCase() === "DEACTIVATED" ? "Deactivated" : "Active"}
                           </span>
                           <p className="text-xs text-stone-500">
                             Last login: {formatUtcTimestamp(user.lastLoginAt)}

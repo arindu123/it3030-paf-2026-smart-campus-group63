@@ -13,6 +13,7 @@ public class AdminUserDto {
     private String phoneNumber;
     private String department;
     private String role;
+    private String status;
     private String provider;
     private Instant lastLoginAt;
     private Instant lastSeenAt;
@@ -26,6 +27,7 @@ public class AdminUserDto {
         dto.setPhoneNumber(user.getPhoneNumber());
         dto.setDepartment(user.getDepartment());
         dto.setRole(user.getRole() == null ? null : user.getRole().name());
+        dto.setStatus(user.getStatus() == null || user.getStatus().isBlank() ? "ACTIVE" : user.getStatus());
         dto.setProvider(user.getProvider() == null ? null : user.getProvider().name());
         dto.setLastLoginAt(user.getLastLoginAt());
         dto.setLastSeenAt(user.getLastSeenAt());
@@ -79,6 +81,14 @@ public class AdminUserDto {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public String getProvider() {

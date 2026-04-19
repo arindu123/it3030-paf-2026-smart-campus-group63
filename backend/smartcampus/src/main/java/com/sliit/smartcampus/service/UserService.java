@@ -2,6 +2,8 @@ package com.sliit.smartcampus.service;
 
 import com.sliit.smartcampus.dto.LoginRequest;
 import com.sliit.smartcampus.dto.AdminCreateUserRequest;
+import com.sliit.smartcampus.dto.ChangePasswordRequest;
+import com.sliit.smartcampus.dto.ProfileUpdateRequest;
 import com.sliit.smartcampus.dto.RegisterRequest;
 import com.sliit.smartcampus.entity.User;
 import com.sliit.smartcampus.enums.AuthProvider;
@@ -14,6 +16,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import java.time.Instant;
+import java.util.Locale;
 
 @Service
 public class UserService {
@@ -25,7 +28,12 @@ public class UserService {
     }
 
     public User registerUser(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail() == null ? "" : request.getEmail().trim();
+        Optional<User> existingUser = userRepository.findByEmail(email);
+        if (existingUser.isPresent()) {
+            if (isDeactivated(existingUser.get())) {
+                throw new IllegalArgumentException("This email belongs to a deactivated account and cannot be used");
+            }
             throw new IllegalArgumentException("Email already exists");
         }
 
@@ -41,13 +49,13 @@ public class UserService {
             throw new IllegalArgumentException("Confirm password does not match");
         }
 
-        if (!request.getEmail().contains("@") || !request.getEmail().contains(".")) {
+        if (!email.contains("@") || !email.contains(".")) {
             throw new IllegalArgumentException("Invalid email format");
         }
 
         User user = new User();
         user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setPassword(request.getPassword());
         user.setPhoneNumber(request.getPhoneNumber());
         user.setDepartment(request.getDepartment());
@@ -60,18 +68,23 @@ public class UserService {
     }
 
     public User createAdminUser(AdminCreateUserRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail() == null ? "" : request.getEmail().trim();
+        Optional<User> existingUser = userRepository.findByEmail(email);
+        if (existingUser.isPresent()) {
+            if (isDeactivated(existingUser.get())) {
+                throw new IllegalArgumentException("This email belongs to a deactivated account and cannot be used");
+            }
             throw new IllegalArgumentException("Email already exists");
         }
 
         if (request.getFullName() == null || request.getFullName().isBlank()
-            || request.getEmail() == null || request.getEmail().isBlank()
+            || email.isBlank()
             || request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()
             || request.getDepartment() == null || request.getDepartment().isBlank()) {
             throw new IllegalArgumentException("All user fields are required");
         }
 
-        if (!request.getEmail().contains("@") || !request.getEmail().contains(".")) {
+        if (!email.contains("@") || !email.contains(".")) {
             throw new IllegalArgumentException("Invalid email format");
         }
 
@@ -92,7 +105,7 @@ public class UserService {
 
         User user = new User();
         user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setPhoneNumber(request.getPhoneNumber());
         user.setDepartment(request.getDepartment());
         user.setRole(role);
@@ -111,7 +124,14 @@ public class UserService {
 
     public Optional<User> authenticate(LoginRequest request) {
         return userRepository.findByEmail(request.getEmail())
+                .filter(user -> !isDeactivated(user))
                 .filter(user -> user.getPassword() != null && user.getPassword().equals(request.getPassword()));
+    }
+
+    public boolean isDeactivatedAccount(String email) {
+        return userRepository.findByEmail(email)
+            .map(this::isDeactivated)
+            .orElse(false);
     }
 
     public boolean isSocialAccount(String email) {
@@ -125,6 +145,9 @@ public class UserService {
 
         if (existingUser.isPresent()) {
             User user = existingUser.get();
+            if (isDeactivated(user)) {
+                throw new IllegalArgumentException("This account is deactivated. Please contact an admin.");
+            }
             boolean changed = false;
 
             if (user.getRole() == null) {
@@ -200,6 +223,119 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+            .orElseThrow(() -> new NoSuchElementException("User not found"));
+    }
+
+    public User updateMyProfile(String actorEmail, ProfileUpdateRequest request) {
+        User user = getUserByEmail(actorEmail);
+
+        String phoneNumber = request.getPhoneNumber() == null ? "" : request.getPhoneNumber().trim();
+        String address = request.getAddress() == null ? "" : request.getAddress().trim();
+        String department = request.getDepartment() == null ? "" : request.getDepartment().trim();
+        String preferredContactMethod = request.getPreferredContactMethod() == null
+            ? "EMAIL"
+            : request.getPreferredContactMethod().trim().toUpperCase(Locale.ROOT);
+        String profilePhotoUrl = request.getProfilePhotoUrl() == null ? "" : request.getProfilePhotoUrl().trim();
+        Boolean notificationEnabled = request.getNotificationEnabled();
+
+        if (phoneNumber.isBlank() || department.isBlank()) {
+            throw new IllegalArgumentException("Phone number and department are required");
+        }
+
+        if (!("EMAIL".equals(preferredContactMethod)
+            || "PHONE".equals(preferredContactMethod)
+            || "WHATSAPP".equals(preferredContactMethod))) {
+            throw new IllegalArgumentException("Preferred contact method must be EMAIL, PHONE, or WHATSAPP");
+        }
+
+        user.setPhoneNumber(phoneNumber);
+        user.setAddress(address.isBlank() ? null : address);
+        user.setDepartment(department);
+        user.setPreferredContactMethod(preferredContactMethod);
+        user.setProfilePhotoUrl(profilePhotoUrl.isBlank() ? null : profilePhotoUrl);
+        if (notificationEnabled != null) {
+            user.setNotificationEnabled(notificationEnabled);
+        }
+        return userRepository.save(user);
+    }
+
+    public void changeMyPassword(String actorEmail, ChangePasswordRequest request) {
+        User user = getUserByEmail(actorEmail);
+
+        if (user.getProvider() != null && user.getProvider() != AuthProvider.LOCAL) {
+            throw new IllegalArgumentException("Password is managed by your OAuth provider");
+        }
+
+        String currentPassword = request.getCurrentPassword() == null ? "" : request.getCurrentPassword();
+        String newPassword = request.getNewPassword() == null ? "" : request.getNewPassword();
+        String confirmPassword = request.getConfirmPassword() == null ? "" : request.getConfirmPassword();
+
+        if (!currentPassword.equals(user.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        if (newPassword.length() < 6) {
+            throw new IllegalArgumentException("New password must be at least 6 characters");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Confirm password does not match");
+        }
+
+        user.setPassword(newPassword);
+        userRepository.save(user);
+    }
+
+    public User deactivateMyProfile(String actorEmail) {
+        throw new IllegalArgumentException("Users cannot deactivate their own account. Please contact an admin.");
+    }
+
+    public User adminDeactivateUser(String adminEmail, Long userId) {
+        User admin = getUserByEmail(adminEmail);
+        if (admin.getRole() != UserRole.ADMIN) {
+            throw new IllegalArgumentException("Only admins can deactivate users");
+        }
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (user.getRole() == UserRole.ADMIN && userRepository.countByRole(UserRole.ADMIN) <= 1) {
+            throw new IllegalArgumentException("Cannot deactivate the last admin account");
+        }
+
+        user.setStatus("DEACTIVATED");
+        return userRepository.save(user);
+    }
+
+    public User adminActivateUser(String adminEmail, Long userId) {
+        User admin = getUserByEmail(adminEmail);
+        if (admin.getRole() != UserRole.ADMIN) {
+            throw new IllegalArgumentException("Only admins can activate users");
+        }
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        user.setStatus("ACTIVE");
+        return userRepository.save(user);
+    }
+
+    public User updateProfilePhoto(String actorEmail, String profilePhotoUrl) {
+        User user = getUserByEmail(actorEmail);
+        user.setProfilePhotoUrl(profilePhotoUrl);
+        return userRepository.save(user);
+    }
+
+    public void deleteMyProfile(String actorEmail) {
+        User user = getUserByEmail(actorEmail);
+
+        if (user.getRole() == UserRole.ADMIN && userRepository.countByRole(UserRole.ADMIN) <= 1) {
+            throw new IllegalArgumentException("Cannot delete the last admin account");
+        }
+
+        userRepository.delete(user);
+    }
+
     public User updateUserRole(Long id, UserRole newRole) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("User not found"));
@@ -226,5 +362,9 @@ public class UserService {
         }
 
         userRepository.delete(user);
+    }
+
+    private boolean isDeactivated(User user) {
+        return "DEACTIVATED".equalsIgnoreCase(user.getStatus());
     }
 }

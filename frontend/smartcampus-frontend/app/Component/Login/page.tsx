@@ -33,6 +33,17 @@ function LoginPageContent() {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+
+  function isDeactivatedMessage(value?: string | null) {
+    return (value || "").toLowerCase().includes("deactivated");
+  }
+
+  function showDeactivatedPopup(value: string) {
+    setPopupMessage(value || "This account is deactivated. Please contact an admin.");
+    setShowPopup(true);
+  }
 
   function getDashboardByRole(role?: string | null) {
     const normalizedRole = normalizeRole(role);
@@ -71,8 +82,15 @@ function LoginPageContent() {
     }
 
     if (oauthStatus === "error") {
-      setIsError(true);
-      setMessage(searchParams.get("message") || "OAuth login failed");
+      const oauthMessage = searchParams.get("message") || "OAuth login failed";
+      if (isDeactivatedMessage(oauthMessage)) {
+        setIsError(false);
+        setMessage("");
+        showDeactivatedPopup(oauthMessage);
+      } else {
+        setIsError(true);
+        setMessage(oauthMessage);
+      }
     }
   }, [router, searchParams]);
 
@@ -94,8 +112,15 @@ function LoginPageContent() {
       const data = (await response.json()) as LoginResult;
 
       if (!response.ok || !data.success) {
-        setIsError(true);
-        setMessage(data.message || "Login failed");
+        const errorMessage = data.message || "Login failed";
+        if (isDeactivatedMessage(errorMessage)) {
+          setIsError(false);
+          setMessage("");
+          showDeactivatedPopup(errorMessage);
+        } else {
+          setIsError(true);
+          setMessage(errorMessage);
+        }
         return;
       }
 
@@ -240,6 +265,24 @@ function LoginPageContent() {
           ) : null}
         </GlassPanel>
       </div>
+
+      {showPopup ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-amber-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-semibold text-stone-900">Account Deactivated</h3>
+            <p className="mt-3 text-sm leading-6 text-stone-700">{popupMessage}</p>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPopup(false)}
+                className="rounded-full bg-[linear-gradient(135deg,#EE9B13,#D78A0F)] px-5 py-2 text-sm font-semibold text-white transition hover:brightness-105"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </SiteFrame>
   );
 }

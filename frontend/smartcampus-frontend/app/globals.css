@@ -100,6 +100,119 @@ a {
   }
 }
 
+@keyframes homeHeroImageA {
+  0% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  45% {
+    opacity: 1;
+    transform: scale(1.09);
+  }
+
+  55% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+
+  95% {
+    opacity: 0;
+    transform: scale(1.07);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes homeHeroImageB {
+  0% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+
+  45% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+
+  55% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  95% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes homeHeroImageC {
+  0% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+
+  20% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  55% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  65% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes homeHeroImageD {
+  0% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+
+  55% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  90% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
 .float-gentle {
   animation: float 6s ease-in-out infinite;
 }

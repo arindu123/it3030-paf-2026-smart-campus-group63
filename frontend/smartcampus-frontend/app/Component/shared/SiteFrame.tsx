@@ -25,9 +25,11 @@ type Accent = keyof typeof accentStyles;
 export function SiteFrame({
   children,
   accent = "amber",
+  mainClassName = "",
 }: Readonly<{
   children: ReactNode;
   accent?: Accent;
+  mainClassName?: string;
 }>) {
   return (
     <div className={`relative min-h-screen overflow-hidden ${accentStyles[accent]}`}>
@@ -37,7 +39,7 @@ export function SiteFrame({
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Nav />
-        <main className="flex-1 px-4 pb-14 pt-28 sm:px-6 lg:px-10">{children}</main>
+        <main className={`flex-1 px-4 pb-14 pt-28 sm:px-6 lg:px-10 ${mainClassName}`}>{children}</main>
         <Footer />
       </div>
     </div>
@@ -74,16 +76,27 @@ export function PageHero({
   description,
   actions,
   aside,
+  backgroundContent,
+  gridClassName,
+  containerClassName,
+  asidePanelClassName,
+  asideContentClassName,
 }: Readonly<{
   eyebrow: string;
   title: string;
   description: string;
   actions?: ReactNode;
   aside?: ReactNode;
+  backgroundContent?: ReactNode;
+  gridClassName?: string;
+  containerClassName?: string;
+  asidePanelClassName?: string;
+  asideContentClassName?: string;
 }>) {
   return (
-    <GlassPanel className="overflow-hidden p-0">
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+    <GlassPanel className={`relative overflow-hidden p-0 ${containerClassName || ""}`}>
+      {backgroundContent ? <div className="pointer-events-none absolute inset-0 z-0">{backgroundContent}</div> : null}
+      <div className={`relative z-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] ${gridClassName || ""}`}>
         <div className="p-6 sm:p-8 lg:p-10">
           <Eyebrow>{eyebrow}</Eyebrow>
           <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.04em] text-stone-950 sm:text-5xl lg:text-6xl">
@@ -95,9 +108,11 @@ export function PageHero({
           {actions ? <div className="mt-8 flex flex-wrap gap-4">{actions}</div> : null}
         </div>
 
-        <div className="relative overflow-hidden rounded-b-[2rem] rounded-t-[1.5rem] border-l border-white/40 bg-[linear-gradient(160deg,rgba(10,43,107,0.98),rgba(14,58,130,0.94))] p-6 text-slate-50 sm:p-8 lg:rounded-l-[2rem] lg:rounded-r-none">
+        <div
+          className={`relative overflow-hidden rounded-b-[2rem] rounded-t-[1.5rem] border-l border-white/40 bg-[linear-gradient(160deg,rgba(10,43,107,0.98),rgba(14,58,130,0.94))] p-6 text-slate-50 sm:p-8 lg:rounded-l-[2rem] lg:rounded-r-none ${asidePanelClassName || ""}`}
+        >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_34%)]" />
-          <div className="relative z-10">{aside}</div>
+          <div className={`relative z-10 ${asideContentClassName || ""}`}>{aside}</div>
         </div>
       </div>
     </GlassPanel>
@@ -114,9 +129,11 @@ export function MetricTile({
   detail: string;
 }>) {
   return (
-    <div className="rounded-[1.5rem] border border-stone-900/10 bg-white/70 p-5 shadow-sm">
+    <div className="min-w-0 rounded-[1.5rem] border border-stone-900/10 bg-white/70 p-5 shadow-sm">
       <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-stone-500">{label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-stone-950">{value}</p>
+      <p className="mt-3 text-[clamp(1.6rem,2.2vw,2.35rem)] font-semibold leading-tight tracking-[-0.04em] text-stone-950 break-words [overflow-wrap:anywhere]">
+        {value}
+      </p>
       <p className="mt-2 text-sm leading-6 text-stone-600">{detail}</p>
     </div>
   );
