@@ -65,6 +65,63 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [newUserFullName, setNewUserFullName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPhoneNumber, setNewUserPhoneNumber] = useState("");
+  const [newUserDepartment, setNewUserDepartment] = useState("");
+  const [newUserRole, setNewUserRole] = useState<UserRole>("USER");
+  const [newUserProvider, setNewUserProvider] = useState<"LOCAL" | "GOOGLE">("LOCAL");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserConfirmPassword, setNewUserConfirmPassword] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
+
+  const createUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreatingUser(true);
+    setError("");
+
+    try {
+      if (newUserPassword !== newUserConfirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: newUserFullName,
+          email: newUserEmail,
+          phoneNumber: newUserPhoneNumber,
+          department: newUserDepartment,
+          role: newUserRole,
+          provider: newUserProvider,
+          password: newUserProvider === "LOCAL" ? newUserPassword : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ message: "User creation failed" }));
+        throw new Error(body.message || "User creation failed");
+      }
+
+      setMessage("User account created successfully.");
+      setNewUserFullName("");
+      setNewUserEmail("");
+      setNewUserPhoneNumber("");
+      setNewUserDepartment("");
+      setNewUserRole("USER");
+      setNewUserProvider("LOCAL");
+      setNewUserPassword("");
+      setNewUserConfirmPassword("");
+      await loadAdminData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "User creation failed");
+    } finally {
+      setCreatingUser(false);
+    }
+  };
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
