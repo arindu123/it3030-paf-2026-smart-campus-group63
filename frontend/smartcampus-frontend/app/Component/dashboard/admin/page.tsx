@@ -81,6 +81,8 @@ export default function AdminDashboardPage() {
   const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [activeBookingAction, setActiveBookingAction] = useState<number | null>(null);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [approvingBookingId, setApprovingBookingId] = useState<number | null>(null);
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -416,8 +418,22 @@ export default function AdminDashboardPage() {
     }
   }
 
-  async function approveBooking(bookingId: number) {
-    setActiveBookingAction(bookingId);
+  function openApproveModal(bookingId: number) {
+    setApprovingBookingId(bookingId);
+    setIsApproveModalOpen(true);
+  }
+
+  function closeApproveModal() {
+    setIsApproveModalOpen(false);
+    setApprovingBookingId(null);
+  }
+
+  async function submitApproveBooking() {
+    if (!approvingBookingId) {
+      return;
+    }
+
+    setActiveBookingAction(approvingBookingId);
     setError("");
 
     try {
@@ -431,7 +447,7 @@ export default function AdminDashboardPage() {
         return;
       }
 
-      await fetchJson(`${API_BASE_URL}/bookings/${bookingId}/approve`, {
+      await fetchJson(`${API_BASE_URL}/bookings/${approvingBookingId}/approve`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -439,7 +455,8 @@ export default function AdminDashboardPage() {
         },
       });
 
-      setMessage(`Booking #${bookingId} approved.`);
+      setMessage(`Booking #${approvingBookingId} approved.`);
+      closeApproveModal();
       await loadAdminData();
     } catch (approveError) {
       setError(approveError instanceof Error ? approveError.message : "Failed to approve booking.");
@@ -760,7 +777,7 @@ export default function AdminDashboardPage() {
                         <button
                           className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={activeBookingAction === booking.id}
-                          onClick={() => void approveBooking(booking.id)}
+                          onClick={() => openApproveModal(booking.id)}
                           type="button"
                         >
                           Approve
@@ -1021,6 +1038,42 @@ export default function AdminDashboardPage() {
             </div>
           </GlassPanel>
         </section>
+
+        {isApproveModalOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+              <h2 className="mb-2 text-2xl font-bold text-stone-950">Confirm Approval</h2>
+              <p className="mb-4 text-sm text-stone-600">
+                Are you sure you want to approve booking #{approvingBookingId}?
+              </p>
+
+              {error && !error.includes("Admin email") ? (
+                <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  className="flex-1 rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  disabled={activeBookingAction === approvingBookingId}
+                  onClick={() => void submitApproveBooking()}
+                >
+                  {activeBookingAction === approvingBookingId ? "Approving..." : "Approve"}
+                </button>
+                <button
+                  className="flex-1 rounded-full bg-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  disabled={activeBookingAction === approvingBookingId}
+                  onClick={closeApproveModal}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {isRejectModalOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
