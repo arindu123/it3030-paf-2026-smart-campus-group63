@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   API_BASE_URL,
   AdminUser,
+  Booking,
   defaultResourceForm,
   fetchJson,
   Resource,
@@ -70,58 +71,15 @@ export default function AdminDashboardPage() {
   const [newUserPhoneNumber, setNewUserPhoneNumber] = useState("");
   const [newUserDepartment, setNewUserDepartment] = useState("");
   const [newUserRole, setNewUserRole] = useState<UserRole>("USER");
-  const [newUserProvider, setNewUserProvider] = useState<"LOCAL" | "GOOGLE">("LOCAL");
+  const [newUserProvider, setNewUserProvider] = useState<"LOCAL" | "GOOGLE">("GOOGLE");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserConfirmPassword, setNewUserConfirmPassword] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
-
-  const createUser = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setCreatingUser(true);
-    setError("");
-
-    try {
-      if (newUserPassword !== newUserConfirmPassword) {
-        throw new Error("Passwords do not match");
-      }
-
-      const response = await fetch(`${API_BASE_URL}/admin/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName: newUserFullName,
-          email: newUserEmail,
-          phoneNumber: newUserPhoneNumber,
-          department: newUserDepartment,
-          role: newUserRole,
-          provider: newUserProvider,
-          password: newUserProvider === "LOCAL" ? newUserPassword : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({ message: "User creation failed" }));
-        throw new Error(body.message || "User creation failed");
-      }
-
-      setMessage("User account created successfully.");
-      setNewUserFullName("");
-      setNewUserEmail("");
-      setNewUserPhoneNumber("");
-      setNewUserDepartment("");
-      setNewUserRole("USER");
-      setNewUserProvider("LOCAL");
-      setNewUserPassword("");
-      setNewUserConfirmPassword("");
-      await loadAdminData();
-    } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "User creation failed");
-    } finally {
-      setCreatingUser(false);
-    }
-  };
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [activeBookingAction, setActiveBookingAction] = useState<number | null>(null);
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -132,9 +90,10 @@ export default function AdminDashboardPage() {
     }
 
     try {
-      const [usersData, resourceData] = await Promise.all([
+      const [usersData, resourceData, bookingData] = await Promise.all([
         fetch(`${API_BASE_URL}/admin/users`).then((response) => response.json() as Promise<AdminUser[]>),
         fetchJson<Resource[]>(`${API_BASE_URL}/resources`),
+        fetchJson<Booking[]>(`${API_BASE_URL}/bookings`),
       ]);
 
       const normalizedUsers = usersData.map((user) => ({
@@ -144,6 +103,7 @@ export default function AdminDashboardPage() {
 
       setUsers(normalizedUsers);
       setResources(resourceData);
+      setBookings(bookingData);
       setRoleEdits(
         normalizedUsers.reduce<Record<number, UserRole>>((accumulator, user) => {
           accumulator[user.id] = user.role;
@@ -153,7 +113,7 @@ export default function AdminDashboardPage() {
       setLastUpdatedAt(new Date().toLocaleTimeString());
 
       if (!silent) {
-        setMessage("Admin dashboard synced with users and resources.");
+        setMessage("Admin dashboard synced with users, resources, and bookings.");
       }
     } catch {
       if (!silent) {
@@ -207,14 +167,16 @@ export default function AdminDashboardPage() {
     const technicianCount = users.filter((user) => user.role === "TECHNICIAN").length;
     const onlineCount = users.filter((user) => user.online).length;
     const activeResourceCount = resources.filter((resource) => resource.status === "ACTIVE").length;
+    const pendingBookingCount = bookings.filter((booking) => booking.status === "PENDING").length;
 
     return {
       activeResourceCount,
       adminCount,
       technicianCount,
       onlineCount,
+      pendingBookingCount,
     };
-  }, [resources, users]);
+  }, [resources, users, bookings]);
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -346,6 +308,143 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function createUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    if (newUserProvider === "LOCAL" && newUserPassword !== newUserConfirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (newUserProvider === "LOCAL" && !newUserPassword) {
+      setError("Password is required for local accounts.");
+      return;
+    }
+
+    setCreatingUser(true);
+
+    try {
+      await fetchJson<AdminUser>(`${API_BASE_URL}/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: newUserFullName,
+          email: newUserEmail,
+          phoneNumber: newUserPhoneNumber,
+          department: newUserDepartment,
+          role: newUserRole,
+          provider: newUserProvider,
+          password: newUserProvider === "LOCAL" ? newUserPassword : undefined,
+        }),
+      });
+
+      setNewUserFullName("");
+      setNewUserEmail("");
+      setNewUserPhoneNumber("");
+      setNewUserDepartment("");
+      setNewUserRole("USER");
+      setNewUserProvider("GOOGLE");
+      setNewUserPassword("");
+      setNewUserConfirmPassword("");
+      setMessage("User account created successfully.");
+      await loadAdminData();
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Failed to create user account.");
+    } finally {
+      setCreatingUser(false);
+    }
+  }
+
+  async function approveBooking(bookingId: number) {
+    setActiveBookingAction(bookingId);
+    setError("");
+
+    try {
+      const adminEmail = window.localStorage.getItem("smartcampusUser") 
+        ? (JSON.parse(window.localStorage.getItem("smartcampusUser") as string) as { email?: string }).email 
+        : "";
+
+      if (!adminEmail) {
+        setError("Admin email not found. Please log in again.");
+        setActiveBookingAction(null);
+        return;
+      }
+
+      await fetchJson(`${API_BASE_URL}/bookings/${bookingId}/approve`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": adminEmail,
+        },
+      });
+
+      setMessage(`Booking #${bookingId} approved.`);
+      await loadAdminData();
+    } catch (approveError) {
+      setError(approveError instanceof Error ? approveError.message : "Failed to approve booking.");
+    } finally {
+      setActiveBookingAction(null);
+    }
+  }
+
+  function openRejectModal(bookingId: number) {
+    setRejectingBookingId(bookingId);
+    setRejectionReason("");
+    setIsRejectModalOpen(true);
+  }
+
+  function closeRejectModal() {
+    setIsRejectModalOpen(false);
+    setRejectingBookingId(null);
+    setRejectionReason("");
+  }
+
+  async function submitRejectBooking() {
+    if (!rejectingBookingId) {
+      return;
+    }
+
+    if (!rejectionReason.trim()) {
+      setError("Please provide a rejection reason.");
+      return;
+    }
+
+    setActiveBookingAction(rejectingBookingId);
+    setError("");
+
+    try {
+      const adminEmail = window.localStorage.getItem("smartcampusUser") 
+        ? (JSON.parse(window.localStorage.getItem("smartcampusUser") as string) as { email?: string }).email 
+        : "";
+
+      if (!adminEmail) {
+        setError("Admin email not found. Please log in again.");
+        setActiveBookingAction(null);
+        return;
+      }
+
+      await fetchJson(`${API_BASE_URL}/bookings/${rejectingBookingId}/reject`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Email": adminEmail,
+        },
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+
+      setMessage(`Booking #${rejectingBookingId} rejected.`);
+      closeRejectModal();
+      await loadAdminData();
+    } catch (rejectError) {
+      setError(rejectError instanceof Error ? rejectError.message : "Failed to reject booking.");
+    } finally {
+      setActiveBookingAction(null);
+    }
+  }
+
   return (
     <SiteFrame accent="sky">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
@@ -408,6 +507,11 @@ export default function AdminDashboardPage() {
             label="Active Resources"
             value={String(overview.activeResourceCount)}
             detail="Resources currently available to campus users"
+          />
+          <MetricTile
+            label="Pending Bookings"
+            value={String(overview.pendingBookingCount)}
+            detail="Resource bookings awaiting admin approval"
           />
         </section>
 
@@ -549,6 +653,71 @@ export default function AdminDashboardPage() {
                     </div>
                   </article>
                 ))
+              )}
+            </div>
+          </Panel>
+        </section>
+
+        <section className="grid gap-6">
+          <Panel
+            eyebrow="Booking Approvals"
+            title="Manage resource booking requests"
+            description="Review and approve or reject pending booking requests from users."
+          >
+            <div className="space-y-4">
+              {bookings.filter((b) => b.status === "PENDING").length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-stone-200 px-6 py-8 text-center text-sm text-stone-500">
+                  No pending bookings. All requests have been reviewed.
+                </div>
+              ) : (
+                bookings
+                  .filter((booking) => booking.status === "PENDING")
+                  .map((booking) => (
+                    <article
+                      key={booking.id}
+                      className="rounded-3xl border border-stone-200 bg-stone-50 p-5 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-xl font-semibold text-stone-950">
+                            {booking.resourceName || "Resource Booking"}
+                          </h3>
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            {booking.purpose}
+                          </p>
+                        </div>
+                        <span className="inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-yellow-800">
+                          PENDING
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-2 text-sm text-stone-600">
+                        <p>Requested by: {booking.createdBy}</p>
+                        <p>Date: {booking.date}</p>
+                        <p>Time: {booking.startTime} - {booking.endTime}</p>
+                        <p>Expected Attendees: {booking.expectedAttendees}</p>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <button
+                          className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={activeBookingAction === booking.id}
+                          onClick={() => void approveBooking(booking.id)}
+                          type="button"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={activeBookingAction === booking.id}
+                          onClick={() => openRejectModal(booking.id)}
+                          type="button"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </article>
+                  ))
               )}
             </div>
           </Panel>
@@ -777,6 +946,53 @@ export default function AdminDashboardPage() {
             </div>
           </GlassPanel>
         </section>
+
+        {isRejectModalOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+              <h2 className="mb-2 text-2xl font-bold text-stone-950">Reject Booking</h2>
+              <p className="mb-4 text-sm text-stone-600">
+                Booking #{rejectingBookingId} - Please provide a reason for rejection
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-stone-700">
+                  Rejection Reason
+                  <textarea
+                    className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    rows={4}
+                    placeholder="Explain why this booking is being rejected..."
+                    value={rejectionReason}
+                    onChange={(event) => setRejectionReason(event.target.value)}
+                  />
+                </label>
+              </div>
+
+              {error && !error.includes("Admin email") ? (
+                <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  className="flex-1 rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
+                  type="button"
+                  onClick={() => void submitRejectBooking()}
+                >
+                  Reject Booking
+                </button>
+                <button
+                  className="flex-1 rounded-full bg-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-200"
+                  type="button"
+                  onClick={closeRejectModal}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </SiteFrame>
   );
