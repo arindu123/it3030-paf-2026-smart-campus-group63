@@ -30,6 +30,11 @@ public class BookingController {
         return bookingService.getAllBookings();
     }
 
+    @GetMapping("/user")
+    public List<BookingResponse> getUserBookings(@RequestHeader("X-User-Email") String userEmail) {
+        return bookingService.getBookingsByUserEmail(userEmail);
+    }
+
     @GetMapping("/{id}")
     public BookingResponse getBookingById(@PathVariable Long id) {
         return bookingService.getBookingById(id);

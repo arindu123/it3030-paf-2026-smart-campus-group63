@@ -48,6 +48,7 @@ public class BookingServiceImpl implements BookingService {
                 booking.getStatus().name()
         );
             response.setCreatedBy(booking.getCreatedBy());
+            response.setCreatedByFullName(booking.getCreatedByUser() != null ? booking.getCreatedByUser().getFullName() : null);
             response.setRejectionReason(booking.getRejectionReason());
             response.setCreatedAt(booking.getCreatedAt() == null ? null : booking.getCreatedAt().toString());
             return response;
@@ -115,6 +116,14 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<BookingResponse> getAllBookings() {
         return bookingRepository.findAll()
+                .stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BookingResponse> getBookingsByUserEmail(String userEmail) {
+        return bookingRepository.findByCreatedByEmail(userEmail)
                 .stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());

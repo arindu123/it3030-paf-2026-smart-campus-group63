@@ -20,6 +20,7 @@ type BookingStatusFilter = "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCEL
 export default function BookingsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Your resource bookings dashboard");
   const [error, setError] = useState("");
@@ -39,8 +40,12 @@ export default function BookingsPage() {
     setError("");
 
     try {
-      const bookingData = await fetchJson<Booking[]>(`${API_BASE_URL}/bookings`, withActorHeaders());
-      setBookings(bookingData);
+      const [userBookingData, allBookingData] = await Promise.all([
+        fetchJson<Booking[]>(`${API_BASE_URL}/bookings/user`, withActorHeaders()),
+        fetchJson<Booking[]>(`${API_BASE_URL}/bookings`, withActorHeaders()),
+      ]);
+      setBookings(userBookingData);
+      setAllBookings(allBookingData);
       setMessage("Bookings synced with backend API.");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load bookings.");
