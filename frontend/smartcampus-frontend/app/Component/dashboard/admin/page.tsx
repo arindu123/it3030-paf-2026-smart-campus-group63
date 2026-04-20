@@ -228,8 +228,6 @@ export default function AdminDashboardPage() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [approvingBookingId, setApprovingBookingId] = useState<number | null>(null);
 
   const loadAdminData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -664,26 +662,6 @@ export default function AdminDashboardPage() {
     setIsRejectModalOpen(false);
     setRejectingBookingId(null);
     setRejectionReason("");
-  }
-
-  function openApproveModal(bookingId: number) {
-    setApprovingBookingId(bookingId);
-    setError("");
-    setIsApproveModalOpen(true);
-  }
-
-  function closeApproveModal() {
-    setIsApproveModalOpen(false);
-    setApprovingBookingId(null);
-  }
-
-  async function submitApproveBooking() {
-    if (approvingBookingId == null) {
-      return;
-    }
-
-    await approveBooking(approvingBookingId);
-    closeApproveModal();
   }
 
   async function submitRejectBooking() {

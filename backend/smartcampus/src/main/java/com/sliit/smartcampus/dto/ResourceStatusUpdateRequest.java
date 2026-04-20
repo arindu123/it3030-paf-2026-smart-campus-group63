@@ -1,9 +1,11 @@
 package com.sliit.smartcampus.dto;
 
 import com.sliit.smartcampus.enums.ResourceStatus;
+import jakarta.validation.constraints.NotNull;
 
 public class ResourceStatusUpdateRequest {
 
+    @NotNull(message = "Resource status is required.")
     private ResourceStatus status;
 
     public ResourceStatusUpdateRequest() {}

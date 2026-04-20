@@ -10,8 +10,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
-import java.util.List;
-
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT b FROM Booking b WHERE b.resource.id = :resourceId AND b.date = :date AND b.status = :status " +
            "AND ((b.startTime < :endTime AND b.endTime > :startTime))")
@@ -24,4 +22,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b WHERE LOWER(b.createdBy) = LOWER(:userEmail) ORDER BY b.createdAt DESC")
     List<Booking> findByCreatedByEmail(@Param("userEmail") String userEmail);
+
+    List<Booking> findByCreatedByUser_Id(Long userId);
 }

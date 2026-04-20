@@ -4,6 +4,7 @@ import com.sliit.smartcampus.dto.ResourceRequest;
 import com.sliit.smartcampus.dto.ResourceStatusUpdateRequest;
 import com.sliit.smartcampus.entity.Resource;
 import com.sliit.smartcampus.service.ResourceService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public class ResourceController {
     }
 
     @PostMapping
-    public Resource createResource(@RequestBody ResourceRequest request) {
+    public Resource createResource(@Valid @RequestBody ResourceRequest request) {
         return resourceService.createResource(request);
     }
 
@@ -35,7 +36,7 @@ public class ResourceController {
     }
 
     @PutMapping("/{id}")
-    public Resource updateResource(@PathVariable Long id, @RequestBody ResourceRequest request) {
+    public Resource updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequest request) {
         return resourceService.updateResource(id, request);
     }
 
@@ -47,7 +48,7 @@ public class ResourceController {
 
     @PatchMapping("/{id}/status")
     public Resource updateResourceStatus(@PathVariable Long id,
-                                         @RequestBody ResourceStatusUpdateRequest request) {
+                                         @Valid @RequestBody ResourceStatusUpdateRequest request) {
         return resourceService.updateResourceStatus(id, request.getStatus());
     }
 }
