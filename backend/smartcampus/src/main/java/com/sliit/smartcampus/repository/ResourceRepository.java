@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
     Optional<Resource> findFirstByNameIgnoreCase(String name);
+
+    Optional<Resource> findFirstByNameIgnoreCaseAndLocationIgnoreCase(String name, String location);
 }
