@@ -223,6 +223,8 @@ export default function AdminDashboardPage() {
   const [creatingUser, setCreatingUser] = useState(false);
   const [isExportingResourcesPdf, setIsExportingResourcesPdf] = useState(false);
   const [activeBookingAction, setActiveBookingAction] = useState<number | null>(null);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [approvingBookingId, setApprovingBookingId] = useState<number | null>(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -627,6 +629,26 @@ export default function AdminDashboardPage() {
     } finally {
       setActiveBookingAction(null);
     }
+  }
+
+  function openApproveModal(bookingId: number) {
+    setApprovingBookingId(bookingId);
+    setError("");
+    setIsApproveModalOpen(true);
+  }
+
+  function closeApproveModal() {
+    setIsApproveModalOpen(false);
+    setApprovingBookingId(null);
+  }
+
+  async function submitApproveBooking() {
+    if (approvingBookingId == null) {
+      return;
+    }
+
+    await approveBooking(approvingBookingId);
+    closeApproveModal();
   }
 
   function openRejectModal(bookingId: number) {
