@@ -1,6 +1,7 @@
 package com.sliit.smartcampus.enums;
 
 public enum CampusNotificationType {
+    WELCOME_BACK,
     BOOKING_REQUEST_SUBMITTED,
     BOOKING_APPROVED,
     BOOKING_REJECTED,

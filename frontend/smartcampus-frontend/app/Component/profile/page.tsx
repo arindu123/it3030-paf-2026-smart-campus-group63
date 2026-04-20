@@ -38,7 +38,7 @@ type ProfileUser = {
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<ProfileUser | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("0");
   const [address, setAddress] = useState("");
   const [department, setDepartment] = useState("");
   const [preferredContactMethod, setPreferredContactMethod] = useState("EMAIL");
@@ -58,6 +58,16 @@ export default function ProfilePage() {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  function sanitizePhoneInput(value: string) {
+    const digits = value.replace(/\D/g, "");
+    if (!digits) {
+      return "0";
+    }
+
+    const withLeadingZero = digits.startsWith("0") ? digits : `0${digits}`;
+    return withLeadingZero.slice(0, 10);
+  }
 
   const joinedDateText = useMemo(() => {
     if (!user?.joinedDate) {
@@ -88,7 +98,7 @@ export default function ProfilePage() {
         };
 
         setUser(normalized);
-        setPhoneNumber(normalized.phoneNumber || "");
+        setPhoneNumber(sanitizePhoneInput(normalized.phoneNumber || ""));
         setAddress(normalized.address || "");
         setDepartment(normalized.department || "");
         setPreferredContactMethod((normalized.preferredContactMethod || "EMAIL").toUpperCase());
@@ -118,6 +128,19 @@ export default function ProfilePage() {
     setError("");
     setMessage("");
 
+    const sanitizedPhoneNumber = sanitizePhoneInput(phoneNumber);
+    if (!sanitizedPhoneNumber.startsWith("0")) {
+      setSaving(false);
+      setError("Phone number must start with 0.");
+      return;
+    }
+
+    if (sanitizedPhoneNumber.length !== 10) {
+      setSaving(false);
+      setError("Phone number must contain exactly 10 digits and start with 0.");
+      return;
+    }
+
     try {
       const updated = await fetchJson<ProfileUser>(
         `${API_BASE_URL}/profile`,
@@ -127,7 +150,7 @@ export default function ProfilePage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            phoneNumber,
+            phoneNumber: sanitizedPhoneNumber,
             address,
             department,
             preferredContactMethod,
@@ -356,9 +379,11 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   value={phoneNumber}
-                  onChange={(event) => setPhoneNumber(event.target.value)}
+                  onChange={(event) => setPhoneNumber(sanitizePhoneInput(event.target.value))}
                   className="rounded-2xl border border-stone-200 bg-white px-4 py-3 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
                   placeholder="Phone number"
+                  inputMode="numeric"
+                  maxLength={10}
                 />
               </label>
 

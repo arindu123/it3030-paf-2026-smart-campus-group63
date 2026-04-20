@@ -17,4 +17,6 @@ public interface CampusNotificationRepository extends JpaRepository<CampusNotifi
                                                            @Param("recipientEmail") String recipientEmail);
 
     long countByRecipientEmailAndIsReadFalse(String recipientEmail);
+
+    long deleteByRecipientEmail(String recipientEmail);
 }
