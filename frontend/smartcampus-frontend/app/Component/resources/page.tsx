@@ -201,7 +201,7 @@ export default function ResourcesPage() {
       return true;
     }
 
-    return [resource.name, resource.type, resource.location, resource.description, resource.status]
+    return [resource.name, resource.type, String(resource.capacity), resource.location, resource.description, resource.status]
       .filter((value): value is string => Boolean(value))
       .some((value) => value.toLowerCase().includes(normalizedSearchTerm));
   });
